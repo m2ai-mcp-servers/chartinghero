@@ -6,8 +6,8 @@
  * MCP server for clinical charting against an EMR backend.
  * Enables Claude to document patient visits directly into EMR.
  *
- * In mock mode (default when no backend is configured), uses fictional test data.
- * Backend configuration is described in the README.
+ * BACKEND selects mock (fictional test data) or fhir. Config fails closed;
+ * see README and docs/FHIR-PIVOT-PLAN.md section 3.2.
  */
 
 import { createRequire } from 'node:module';
@@ -19,7 +19,9 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { getConfig, validateConfig } from './config.js';
+import { ConfigError, getConfig, MOCK_BANNER } from './config.js';
+import type { ChartingHeroConfig } from './config.js';
+import { getBackend } from './services/patient-service.js';
 import { logger } from './utils/logger.js';
 import {
   searchPatientTool,
@@ -32,14 +34,27 @@ import {
 
 const { version: VERSION } = createRequire(import.meta.url)('../package.json') as { version: string };
 
-// Load configuration
-const config = getConfig();
-
-// Validate configuration
-const configErrors = validateConfig(config);
-if (configErrors.length > 0 && !config.mockMode) {
-  logger.error('Configuration errors', { errors: configErrors });
+function fail(lines: string[]): never {
+  for (const line of lines) console.error(`[CHARTINGHERO] startup aborted: ${line}`);
   process.exit(1);
+}
+
+// Load and validate configuration (fails closed)
+let config: ChartingHeroConfig;
+try {
+  config = getConfig();
+} catch (error) {
+  if (error instanceof ConfigError) fail(error.problems);
+  throw error;
+}
+
+for (const warning of config.warnings) logger.warn(warning);
+
+// Build the backend now so an unavailable backend aborts startup, not the first tool call.
+try {
+  getBackend();
+} catch (error) {
+  fail([error instanceof Error ? error.message : String(error)]);
 }
 
 // Create MCP server instance
@@ -123,18 +138,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   logger.info('Starting ChartingHero MCP server', {
     version: VERSION,
-    mockMode: config.mockMode,
-    supabaseEnabled: config.supabaseEnabled,
+    backend: config.backend,
+    dashboardSync: config.dashboardSync,
   });
 
-  if (config.mockMode) {
-    logger.warn('Running in MOCK MODE - no real API calls will be made');
+  if (config.backendDefaulted) {
+    logger.warn(`BACKEND not set: using the mock backend. ${MOCK_BANNER} Set BACKEND=mock to make this explicit.`);
+  } else if (config.backend === 'mock') {
+    logger.warn(`Mock backend: ${MOCK_BANNER}`);
   }
 
-  if (config.supabaseEnabled) {
-    logger.info('Supabase integration ENABLED - visits will sync to dashboard');
-  } else {
-    logger.warn('Supabase integration DISABLED - check SUPABASE_URL and SUPABASE_ANON_KEY env vars');
+  if (config.dashboardSync && !config.supabaseEnabled) {
+    logger.warn('DASHBOARD_SYNC=on but SUPABASE_URL or SUPABASE_ANON_KEY is missing; sync calls will fail');
   }
 
   const transport = new StdioServerTransport();

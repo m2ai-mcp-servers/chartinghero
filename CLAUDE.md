@@ -28,13 +28,16 @@ Before a commit: `npx tsc --noEmit`, `npx jest`, `npx eslint "src/**/*.ts"`.
 
 ```
 src/
-├── index.ts           # MCP server entry point (name and version from package.json)
-├── config.ts          # env config (legacy vendor env reads move to src/legacy-env.ts in PR2)
+├── index.ts           # MCP server entry point; config and backend fail closed at startup
+├── config.ts          # env config (section 3.2 of the plan); config/hosts.ts holds WRITE_HOSTS
+├── legacy-env.ts      # the only reader of deprecated 0.1.0 env vars
+├── backends/          # PatientBackend interface, mock backend, factory
+├── mappers/           # DTO mappers shared by backends
 ├── tools/             # search-patient, create-visit-note, get-patient-history
-├── services/          # patient-service (mock vs real seam), mock-data, supabase-service
+├── services/          # patient-service (validation, delegation, projection hook), mock-data, supabase-service
 ├── types/             # patient and visit types
 └── utils/             # logger, errors (ChartingHeroError base class)
-tests/                 # jest suite
+tests/                 # jest suite; startup.test.ts spawns the server via tsx
 docs/FHIR-PIVOT-PLAN.md
 ```
 
@@ -51,6 +54,7 @@ docs/FHIR-PIVOT-PLAN.md
 - Synthetic data only. No real patient data in tests, fixtures, logs or the demo Supabase table.
 - No vendor product names in code, docs or the demo.
 - Writes to a real EMR are out of scope until SMART user auth lands (0.3.0).
+- Dashboard projection runs only with `DASHBOARD_SYNC=on` and the mock backend until the PR8 guard exists.
 - Publishing to npm or the MCP Registry and Netlify changes need the owner's approval each time.
 
 ## Related

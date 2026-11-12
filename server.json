@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.m2ai-mcp-servers/chartinghero",
-  "description": "MCP server for clinical charting with Claude - document patient visits to EMR",
+  "description": "MCP server for clinical charting with Claude: FHIR R4 backend (in progress) or a fictional mock",
   "repository": {
     "url": "https://github.com/m2ai-mcp-servers/chartinghero",
     "source": "github"
@@ -17,18 +17,95 @@
       },
       "environmentVariables": [
         {
-          "name": "POINTCARE_API_URL",
-          "description": "EMR API base URL (optional - runs in mock mode if not set)",
+          "name": "BACKEND",
+          "description": "mock or fhir. Required when any FHIR_* var is set; unset means mock with fictional patients",
           "isRequired": false,
           "format": "string",
           "isSecret": false
         },
         {
-          "name": "POINTCARE_API_KEY",
-          "description": "EMR API key (required for production mode)",
+          "name": "FHIR_BASE_URL",
+          "description": "FHIR R4 base URL (required when BACKEND=fhir)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "FHIR_ENVIRONMENT",
+          "description": "local or sandbox (required when BACKEND=fhir; production is not supported in 0.2.0)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "FHIR_WRITE",
+          "description": "on or off (default off). on is accepted only for hosts in the built-in WRITE_HOSTS list",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "FHIR_WRITE_PROFILE",
+          "description": "full (default) or note-only",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "FHIR_BEARER_TOKEN",
+          "description": "Optional static bearer token for the FHIR server",
           "isRequired": false,
           "format": "string",
           "isSecret": true
+        },
+        {
+          "name": "FHIR_PRACTITIONER_ID",
+          "description": "Practitioner resource id that authors notes (required when BACKEND=fhir)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "FHIR_IDENTIFIER_SYSTEM",
+          "description": "Identifier namespace URI (default https://memyselfplusai.com/fhir/chartinghero)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VISIT_TIMEZONE",
+          "description": "IANA time zone for visit times, e.g. America/New_York (required when BACKEND=fhir)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "DASHBOARD_SYNC",
+          "description": "on or off (default off). Projects mock visits to the demo dashboard; synthetic data only",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SUPABASE_URL",
+          "description": "Demo dashboard Supabase URL (used only with DASHBOARD_SYNC=on)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "SUPABASE_ANON_KEY",
+          "description": "Demo dashboard Supabase anon key (used only with DASHBOARD_SYNC=on)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true
+        },
+        {
+          "name": "LOG_LEVEL",
+          "description": "debug, info, warn or error (an invalid value aborts startup)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     }

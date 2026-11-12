@@ -31,10 +31,11 @@ npm test
 
 ## Mock mode
 
-Mock mode is the default and the only working backend today. It:
+Mock mode is the only working backend today. It:
 - uses 5 fictional test patients
-- stores visit notes in memory
-- prefixes every tool result with a mock-mode banner
+- stores visit notes in memory (lost on restart)
+- saves new notes as `pending_review`, unsigned, authored by a fictional nurse
+- prefixes every tool result with `[MOCK DATA: fictional patients]`
 
 ## Tools
 
@@ -89,12 +90,18 @@ Restart Claude Desktop, then check that `search_patient`, `create_visit_note` an
 
 ## Configuration
 
+Config fails closed: an invalid value stops the server at startup with a message naming the variable.
+
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | No | Sync mock visits to the [demo dashboard](https://github.com/m2ai-mcp-servers/chartinghero-demo-emr). Synthetic data only. |
+| `BACKEND` | When any `FHIR_*` var is set | `mock` or `fhir`. Unset with no `FHIR_*` vars means mock, with a stderr banner. |
+| `FHIR_BASE_URL`, `FHIR_ENVIRONMENT`, `FHIR_PRACTITIONER_ID`, `VISIT_TIMEZONE` | When `BACKEND=fhir` | FHIR server, `local` or `sandbox`, authoring Practitioner id, IANA time zone. The fhir backend itself is not in this build yet. |
+| `FHIR_WRITE` | No | `off` (default) or `on`. `on` is refused unless the host is in `WRITE_HOSTS` (`src/config/hosts.ts`). |
+| `FHIR_WRITE_PROFILE`, `FHIR_BEARER_TOKEN`, `FHIR_IDENTIFIER_SYSTEM` | No | `full` or `note-only`; static token; identifier namespace. |
+| `DASHBOARD_SYNC` | No | `off` (default) or `on`. With `on` and the mock backend, new notes are copied to the [demo dashboard](https://github.com/m2ai-mcp-servers/chartinghero-demo-emr) via `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Synthetic data only. |
 | `LOG_LEVEL` | No | `debug`, `info`, `warn` or `error` |
 
-Backend selection (`BACKEND`, `FHIR_*`) arrives with the FHIR backend; the earlier vendor-specific variables are being retired.
+Variables from the 0.1.0 release are still read for one release with a deprecation warning, but no longer select a backend.
 
 ## Project structure
 
@@ -102,13 +109,16 @@ Backend selection (`BACKEND`, `FHIR_*`) arrives with the FHIR backend; the earli
 chartinghero/
 ├── src/
 │   ├── index.ts              # MCP server entry point
-│   ├── config.ts             # Configuration
+│   ├── config.ts             # Fail-closed configuration
+│   ├── config/hosts.ts       # WRITE_HOSTS allowlist
+│   ├── legacy-env.ts         # Deprecated 0.1.0 env vars (one release)
+│   ├── backends/             # PatientBackend seam, mock backend, factory
+│   ├── mappers/              # DTO mappers
 │   ├── tools/                # search-patient, create-visit-note, get-patient-history
-│   ├── services/             # patient-service, mock-data, supabase-service
+│   ├── services/             # patient-service (validation + projection hook), mock-data, supabase-service
 │   ├── types/                # Patient and visit types
 │   └── utils/                # Logger, errors
-├── tests/
-│   └── patient-service.test.ts
+├── tests/                    # service, config, legacy-env, startup
 ├── docs/
 │   └── FHIR-PIVOT-PLAN.md    # Backend pivot plan
 ├── package.json

@@ -7,4 +7,8 @@ module.exports = {
   extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
   env: { node: true, es2022: true },
   ignorePatterns: ['dist/', 'node_modules/', 'coverage/'],
+  rules: {
+    // Leading underscore marks an intentionally unused parameter or rest-omitted key.
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+  },
 };

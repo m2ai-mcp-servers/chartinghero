@@ -237,11 +237,3 @@ export async function updateVisitInSupabase(
     return false;
   }
 }
-
-/**
- * Check if Supabase is configured and connected
- */
-export function isSupabaseEnabled(): boolean {
-  const config = getConfig();
-  return config.supabaseEnabled;
-}

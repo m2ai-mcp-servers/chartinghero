@@ -7,12 +7,7 @@
  * NOTE: All names, addresses, and identifiers are fictional.
  */
 
-import type {
-  Patient,
-  PatientSearchResult,
-  VisitNote,
-  VisitNoteSummary,
-} from '../types/index.js';
+import type { Patient, VisitNote } from '../types/index.js';
 
 /**
  * Mock patient database
@@ -328,48 +323,3 @@ export const mockVisitNotes: VisitNote[] = [
     updatedAt: '2024-12-18T12:30:00Z',
   },
 ];
-
-/**
- * Convert Patient to PatientSearchResult
- */
-export function toSearchResult(patient: Patient): PatientSearchResult {
-  return {
-    id: patient.id.id,
-    firstName: patient.demographics.firstName,
-    lastName: patient.demographics.lastName,
-    dateOfBirth: patient.demographics.dateOfBirth,
-    phone: patient.contact.phone,
-    status: patient.status,
-    primaryDiagnosis: patient.diagnosis?.[0],
-  };
-}
-
-/**
- * Convert VisitNote to VisitNoteSummary
- */
-export function toVisitSummary(visit: VisitNote): VisitNoteSummary {
-  return {
-    id: visit.id,
-    visitDate: visit.visitDate,
-    visitType: visit.visitType,
-    status: visit.status,
-    duration: visit.duration,
-    nurseName: visit.nurseName,
-    hasVitals: visit.vitalSigns !== undefined,
-  };
-}
-
-/**
- * Generate a new visit note ID
- */
-let visitNoteCounter = 30000;
-export function generateVisitNoteId(): string {
-  return `VN-${visitNoteCounter++}`;
-}
-
-/**
- * Get current timestamp
- */
-export function getCurrentTimestamp(): string {
-  return new Date().toISOString();
-}

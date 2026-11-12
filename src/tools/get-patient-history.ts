@@ -5,7 +5,7 @@
  */
 
 import { getPatientHistory } from '../services/patient-service.js';
-import { getConfig } from '../config.js';
+import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { formatErrorForMcp } from '../utils/errors.js';
 import type { PatientHistoryParams, VisitType } from '../types/index.js';
@@ -102,8 +102,8 @@ export async function executeGetPatientHistory(
     // Format response for Claude
     let resultText = '';
 
-    if (config.mockMode) {
-      resultText += '⚠️ MOCK MODE: Using test data (no EMR connected)\n\n';
+    if (config.backend === 'mock') {
+      resultText += `${MOCK_BANNER}\n\n`;
     }
 
     resultText += `**Visit History for ${response.patientName}** (${response.patientId})\n\n`;
