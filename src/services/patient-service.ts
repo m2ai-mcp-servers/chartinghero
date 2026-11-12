@@ -1,23 +1,18 @@
 /**
- * Patient Service - Business logic for patient operations
- *
- * This service handles all patient-related operations. In mock mode,
- * it uses the mock data layer. When a real EMR backend is available,
- * it will make real API calls.
+ * Patient Service: input validation, delegation to the configured backend,
+ * and the post-write dashboard projection hook.
  */
 
+import { createHash, randomUUID } from 'node:crypto';
+
 import { getConfig } from '../config.js';
+import type { ChartingHeroConfig } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { NotFoundError, ValidationError } from '../utils/errors.js';
-import {
-  mockPatients,
-  mockVisitNotes,
-  toSearchResult,
-  toVisitSummary,
-  generateVisitNoteId,
-  getCurrentTimestamp,
-} from './mock-data.js';
-import { syncVisitToSupabase, isSupabaseEnabled } from './supabase-service.js';
+import { ValidationError } from '../utils/errors.js';
+import { createBackend } from '../backends/factory.js';
+import { MOCK_PRACTITIONER } from '../backends/mock-backend.js';
+import type { PatientBackend, RequestContext, WriteContext } from '../backends/types.js';
+import { syncVisitToSupabase } from './supabase-service.js';
 import type {
   Patient,
   PatientSearchParams,
@@ -29,272 +24,147 @@ import type {
   VisitNote,
 } from '../types/index.js';
 
-/**
- * Search for patients
- */
-export async function searchPatients(
-  params: PatientSearchParams
-): Promise<PatientSearchResponse> {
-  const config = getConfig();
-  const startTime = Date.now();
+type SyncFn = (visit: VisitNote) => Promise<boolean>;
 
-  logger.info('Searching patients', { searchType: params.searchType, hasQuery: !!params.query });
+let backendInstance: PatientBackend | null = null;
+let syncFn: SyncFn = syncVisitToSupabase;
 
-  if (!params.query || params.query.trim().length === 0) {
-    throw new ValidationError('Search query is required', 'query');
-  }
+/** The active backend, created from config on first use. */
+export function getBackend(): PatientBackend {
+  if (!backendInstance) backendInstance = createBackend(getConfig());
+  return backendInstance;
+}
 
-  if (config.mockMode) {
-    // Mock implementation
-    const query = params.query.toLowerCase().trim();
-    const searchType = params.searchType || 'all';
-    const limit = params.limit || 10;
-    const offset = params.offset || 0;
+/** Test seam: inject a backend and/or the dashboard sync function. */
+export function configurePatientService(deps: { backend?: PatientBackend; sync?: SyncFn }): void {
+  if (deps.backend) backendInstance = deps.backend;
+  if (deps.sync) syncFn = deps.sync;
+}
 
-    const filtered = mockPatients.filter((patient) => {
-      // Filter by status if specified
-      if (params.status && patient.status !== params.status) {
-        return false;
-      }
+export function resetPatientService(): void {
+  backendInstance = null;
+  syncFn = syncVisitToSupabase;
+}
 
-      const fullName = `${patient.demographics.firstName} ${patient.demographics.lastName}`.toLowerCase();
-      const id = patient.id.id.toLowerCase();
-      const phone = (patient.contact.phone || '').replace(/\D/g, '');
-      const queryDigits = query.replace(/\D/g, '');
+function requestContext(config: ChartingHeroConfig): RequestContext {
+  return { requestId: randomUUID(), timezone: config.visitTimezone ?? 'UTC' };
+}
 
-      switch (searchType) {
-        case 'name':
-          return fullName.includes(query);
-        case 'id':
-          return id.includes(query);
-        case 'phone':
-          return phone.includes(queryDigits);
-        case 'all':
-        default:
-          return (
-            fullName.includes(query) ||
-            id.includes(query) ||
-            phone.includes(queryDigits)
-          );
-      }
-    });
+function practitionerFor(config: ChartingHeroConfig, backend: PatientBackend): WriteContext['practitioner'] {
+  if (backend.kind === 'mock' || !config.fhir) return MOCK_PRACTITIONER;
+  // The display name is resolved from Practitioner.name in PR7.
+  return {
+    reference: `Practitioner/${config.fhir.practitionerId}`,
+    display: `Practitioner/${config.fhir.practitionerId}`,
+    source: 'configured-sandbox',
+  };
+}
 
-    const total = filtered.length;
-    const results = filtered.slice(offset, offset + limit).map(toSearchResult);
-
-    logger.audit('search_patient', true, Date.now() - startTime);
-
-    return {
-      results,
-      total,
-      limit,
-      offset,
-      hasMore: offset + results.length < total,
-    };
-  }
-
-  // TODO: Real API implementation
-  // const response = await fetch(`${config.apiUrl}/patients/search`, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': `Bearer ${config.apiKey}`,
-  //     'Content-Type': 'application/json',
-  //   },
-  //   body: JSON.stringify(params),
-  // });
-
-  throw new Error('Real API not yet implemented');
+function requireText(value: string | undefined, message: string, field: string): void {
+  if (!value || value.trim().length === 0) throw new ValidationError(message, field);
 }
 
 /**
- * Get a patient by ID
+ * The dashboard projection runs only when DASHBOARD_SYNC=on and the write went to the
+ * mock backend. SUPABASE_* alone no longer syncs. FHIR projection waits for the PR8 guard.
  */
+export function shouldProject(config: ChartingHeroConfig, backend: PatientBackend): boolean {
+  return config.dashboardSync && config.backend === 'mock' && backend.kind === 'mock';
+}
+
+export async function searchPatients(params: PatientSearchParams): Promise<PatientSearchResponse> {
+  const config = getConfig();
+  const startTime = Date.now();
+  logger.info('Searching patients', { searchType: params.searchType, hasQuery: !!params.query });
+
+  requireText(params.query, 'Search query is required', 'query');
+
+  try {
+    const response = await getBackend().searchPatients(params, requestContext(config));
+    logger.audit('search_patient', true, Date.now() - startTime);
+    return response;
+  } catch (error) {
+    logger.audit('search_patient', false, Date.now() - startTime);
+    throw error;
+  }
+}
+
 export async function getPatient(patientId: string): Promise<Patient> {
   const config = getConfig();
   const startTime = Date.now();
-
   logger.info('Getting patient', { hasPatientId: !!patientId });
 
-  if (!patientId || patientId.trim().length === 0) {
-    throw new ValidationError('Patient ID is required', 'patientId');
-  }
+  requireText(patientId, 'Patient ID is required', 'patientId');
 
-  if (config.mockMode) {
-    const patient = mockPatients.find((p) => p.id.id === patientId);
-
-    if (!patient) {
-      logger.audit('get_patient', false, Date.now() - startTime);
-      throw new NotFoundError('Patient');
-    }
-
+  try {
+    const patient = await getBackend().getPatient({ serverId: patientId }, requestContext(config));
     logger.audit('get_patient', true, Date.now() - startTime);
     return patient;
+  } catch (error) {
+    logger.audit('get_patient', false, Date.now() - startTime);
+    throw error;
   }
-
-  // TODO: Real API implementation
-  throw new Error('Real API not yet implemented');
 }
 
-/**
- * Get patient visit history
- */
-export async function getPatientHistory(
-  params: PatientHistoryParams
-): Promise<PatientHistoryResponse> {
+export async function getPatientHistory(params: PatientHistoryParams): Promise<PatientHistoryResponse> {
   const config = getConfig();
   const startTime = Date.now();
-
   logger.info('Getting patient history', { hasPatientId: !!params.patientId });
 
-  if (!params.patientId || params.patientId.trim().length === 0) {
-    throw new ValidationError('Patient ID is required', 'patientId');
-  }
+  requireText(params.patientId, 'Patient ID is required', 'patientId');
 
-  if (config.mockMode) {
-    // First verify the patient exists
-    const patient = mockPatients.find((p) => p.id.id === params.patientId);
-    if (!patient) {
-      logger.audit('get_patient_history', false, Date.now() - startTime);
-      throw new NotFoundError('Patient');
-    }
-
-    const limit = params.limit || 10;
-    const offset = params.offset || 0;
-
-    // Filter visits for this patient
-    let visits = mockVisitNotes.filter((v) => v.patientId === params.patientId);
-
-    // Filter by date range if specified
-    if (params.startDate) {
-      visits = visits.filter((v) => v.visitDate >= params.startDate!);
-    }
-    if (params.endDate) {
-      visits = visits.filter((v) => v.visitDate <= params.endDate!);
-    }
-
-    // Filter by visit type if specified
-    if (params.visitType) {
-      visits = visits.filter((v) => v.visitType === params.visitType);
-    }
-
-    // Sort by date descending (most recent first)
-    visits.sort((a, b) => b.visitDate.localeCompare(a.visitDate));
-
-    const total = visits.length;
-    const paginatedVisits = visits.slice(offset, offset + limit);
-
+  try {
+    const response = await getBackend().getPatientHistory(params, requestContext(config));
     logger.audit('get_patient_history', true, Date.now() - startTime);
-
-    return {
-      patientId: params.patientId,
-      patientName: `${patient.demographics.firstName} ${patient.demographics.lastName}`,
-      visits: paginatedVisits.map(toVisitSummary),
-      total,
-      limit,
-      offset,
-      hasMore: offset + paginatedVisits.length < total,
-    };
+    return response;
+  } catch (error) {
+    logger.audit('get_patient_history', false, Date.now() - startTime);
+    throw error;
   }
-
-  // TODO: Real API implementation
-  throw new Error('Real API not yet implemented');
 }
 
-/**
- * Create a new visit note
- */
-export async function createVisitNote(
-  params: CreateVisitNoteParams
-): Promise<CreateVisitNoteResponse> {
+export async function createVisitNote(params: CreateVisitNoteParams): Promise<CreateVisitNoteResponse> {
   const config = getConfig();
   const startTime = Date.now();
+  logger.info('Creating visit note', { hasPatientId: !!params.patientId, visitType: params.visitType });
 
-  logger.info('Creating visit note', {
-    hasPatientId: !!params.patientId,
-    visitType: params.visitType,
-  });
+  requireText(params.patientId, 'Patient ID is required', 'patientId');
+  if (!params.visitType) throw new ValidationError('Visit type is required', 'visitType');
+  requireText(params.visitDate, 'Visit date is required', 'visitDate');
+  requireText(params.timeIn, 'Time in is required', 'timeIn');
+  requireText(params.timeOut, 'Time out is required', 'timeOut');
 
-  // Validate required fields
-  if (!params.patientId || params.patientId.trim().length === 0) {
-    throw new ValidationError('Patient ID is required', 'patientId');
-  }
-  if (!params.visitType) {
-    throw new ValidationError('Visit type is required', 'visitType');
-  }
-  if (!params.visitDate) {
-    throw new ValidationError('Visit date is required', 'visitDate');
-  }
-  if (!params.timeIn) {
-    throw new ValidationError('Time in is required', 'timeIn');
-  }
-  if (!params.timeOut) {
-    throw new ValidationError('Time out is required', 'timeOut');
+  const backend = getBackend();
+  const practitioner = practitionerFor(config, backend);
+  const ctx: WriteContext = {
+    ...requestContext(config),
+    practitioner,
+    idempotencyKey: createHash('sha256')
+      .update([params.patientId, params.visitDate, params.timeIn, practitioner.reference].join('|'))
+      .digest('hex'),
+    dryRun: false,
+  };
+
+  let response: CreateVisitNoteResponse;
+  try {
+    response = await backend.createVisitNote(params, ctx);
+  } catch (error) {
+    logger.audit('create_visit_note', false, Date.now() - startTime);
+    throw error;
   }
 
-  if (config.mockMode) {
-    // Verify patient exists
-    const patient = mockPatients.find((p) => p.id.id === params.patientId);
-    if (!patient) {
-      logger.audit('create_visit_note', false, Date.now() - startTime);
-      throw new NotFoundError('Patient');
+  // Post-write projection hook. The message reports what actually happened.
+  if (response.success && response.visitNote && shouldProject(config, backend)) {
+    const synced = await syncFn(response.visitNote);
+    if (synced) {
+      logger.info('Visit synced to dashboard', { visitId: response.visitNoteId });
+      response.message += ' (synced to dashboard)';
+    } else {
+      logger.warn('Dashboard sync failed', { visitId: response.visitNoteId });
+      response.message += ' (dashboard sync failed)';
     }
-
-    // Calculate duration in minutes
-    const [inHour, inMin] = params.timeIn.split(':').map(Number);
-    const [outHour, outMin] = params.timeOut.split(':').map(Number);
-    const duration = (outHour * 60 + outMin) - (inHour * 60 + inMin);
-
-    // Create the visit note
-    const visitNote: VisitNote = {
-      id: generateVisitNoteId(),
-      patientId: params.patientId,
-      visitType: params.visitType,
-      status: 'completed',
-      visitDate: params.visitDate,
-      timeIn: params.timeIn,
-      timeOut: params.timeOut,
-      duration: duration > 0 ? duration : 0,
-      vitalSigns: params.vitalSigns,
-      subjective: params.subjective,
-      objective: params.objective,
-      assessment: params.assessment,
-      plan: params.plan,
-      interventions: params.interventions,
-      patientResponse: params.patientResponse,
-      education: params.education,
-      notes: params.notes,
-      nextVisitDate: params.nextVisitDate,
-      nurseId: 'RN-CURRENT', // Would come from auth context
-      nurseName: 'Current User, RN', // Would come from auth context
-      signedAt: getCurrentTimestamp(),
-      signedBy: 'Current User, RN',
-      createdAt: getCurrentTimestamp(),
-      updatedAt: getCurrentTimestamp(),
-    };
-
-    // Add to mock database
-    mockVisitNotes.push(visitNote);
-
-    // Sync to Supabase for dashboard display
-    if (isSupabaseEnabled()) {
-      const synced = await syncVisitToSupabase(visitNote);
-      if (synced) {
-        logger.info('Visit synced to Supabase dashboard', { visitId: visitNote.id });
-      } else {
-        logger.warn('Failed to sync visit to Supabase', { visitId: visitNote.id });
-      }
-    }
-
-    logger.audit('create_visit_note', true, Date.now() - startTime);
-
-    return {
-      success: true,
-      visitNoteId: visitNote.id,
-      message: `Visit note ${visitNote.id} created successfully for patient ${params.patientId}${isSupabaseEnabled() ? ' (synced to dashboard)' : ''}`,
-      visitNote,
-    };
   }
 
-  // TODO: Real API implementation
-  throw new Error('Real API not yet implemented');
+  logger.audit('create_visit_note', response.success, Date.now() - startTime);
+  return response;
 }

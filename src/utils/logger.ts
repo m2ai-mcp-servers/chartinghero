@@ -6,8 +6,7 @@
  */
 
 import { getConfig } from '../config.js';
-
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+import type { LogLevel } from '../config.js';
 
 const LOG_LEVELS: Record<LogLevel, number> = {
   debug: 0,
@@ -77,8 +76,13 @@ function formatMessage(level: LogLevel, message: string, data?: unknown): string
  * Check if a log level should be output
  */
 function shouldLog(level: LogLevel): boolean {
-  const config = getConfig();
-  return LOG_LEVELS[level] >= LOG_LEVELS[config.logLevel];
+  let threshold: LogLevel = 'info';
+  try {
+    threshold = getConfig().logLevel;
+  } catch {
+    // Invalid config: startup reports it and exits; log at info until then.
+  }
+  return LOG_LEVELS[level] >= LOG_LEVELS[threshold];
 }
 
 /**

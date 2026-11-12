@@ -5,7 +5,7 @@
  */
 
 import { createVisitNote } from '../services/patient-service.js';
-import { getConfig } from '../config.js';
+import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { formatErrorForMcp } from '../utils/errors.js';
 import type { CreateVisitNoteParams, VitalSigns, VisitType } from '../types/index.js';
@@ -147,13 +147,17 @@ export async function executeCreateVisitNote(
     // Format response for Claude
     let resultText = '';
 
-    if (config.mockMode) {
-      resultText += '⚠️ MOCK MODE: Using test data (no EMR connected)\n\n';
+    if (config.backend === 'mock') {
+      resultText += `${MOCK_BANNER}\n\n`;
     }
 
     if (response.success) {
       resultText += `✅ **Visit Note Created Successfully**\n\n`;
+      resultText += `${response.message}\n\n`;
       resultText += `• Note ID: ${response.visitNoteId}\n`;
+      if (response.visitNote?.status === 'pending_review') {
+        resultText += `• Status: pending review (unsigned; the nurse signs in the EMR)\n`;
+      }
       resultText += `• Patient: ${params.patientId}\n`;
       resultText += `• Visit Type: ${params.visitType}\n`;
       resultText += `• Date: ${params.visitDate}\n`;
