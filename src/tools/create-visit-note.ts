@@ -7,7 +7,7 @@
 import { createVisitNote } from '../services/patient-service.js';
 import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { formatErrorForMcp } from '../utils/errors.js';
+import { errorLogFields, formatErrorForMcp } from '../utils/errors.js';
 import type { CreateVisitNoteParams, VitalSigns, VisitType } from '../types/index.js';
 
 /**
@@ -198,7 +198,7 @@ export async function executeCreateVisitNote(
       content: [{ type: 'text', text: resultText }],
     };
   } catch (error) {
-    logger.error('create_visit_note failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+    logger.error('Tool failed', { tool: 'create_visit_note', ...errorLogFields(error) });
 
     return {
       content: [formatErrorForMcp(error)],

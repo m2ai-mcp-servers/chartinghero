@@ -313,6 +313,18 @@ describe('dashboard projection gate', () => {
     expect(result.message).toContain('(synced to dashboard)');
   });
 
+  test('a sync that throws after the write still returns the created note', async () => {
+    Object.assign(process.env, { BACKEND: 'mock', DASHBOARD_SYNC: 'on' });
+    configurePatientService({
+      sync: jest.fn<(v: VisitNote) => Promise<boolean>>().mockRejectedValue(new Error('Invalid supabaseUrl')),
+    });
+
+    const result = await createVisitNote(NOTE);
+
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('(dashboard sync failed)');
+  });
+
   test('a failed sync is reported as failed, not as synced', async () => {
     Object.assign(process.env, { BACKEND: 'mock', DASHBOARD_SYNC: 'on' });
     configurePatientService({ sync: jest.fn<(v: VisitNote) => Promise<boolean>>().mockResolvedValue(false) });
