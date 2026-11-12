@@ -19,6 +19,8 @@ export interface VitalSigns {
   weight?: number;
   weightUnit?: 'lbs' | 'kg';
   painLevel?: number;  // 0-10 scale
+  oxygenFlowRate?: number;  // L/min of supplemental O2 during the SpO2 reading
+  bloodGlucose?: number;    // mg/dL
 }
 
 /**
@@ -56,6 +58,7 @@ export interface CreateVisitNoteParams {
   visitDate: string;          // ISO 8601 date
   timeIn: string;             // HH:MM format
   timeOut: string;            // HH:MM format
+  overnight?: boolean;        // timeOut is on the day after visitDate
   vitalSigns?: VitalSigns;
   subjective?: string;        // Patient's reported symptoms/concerns
   objective?: string;         // Nurse's observations
@@ -66,6 +69,9 @@ export interface CreateVisitNoteParams {
   education?: string[];       // Patient education provided
   nextVisitDate?: string;     // Scheduled next visit
   notes?: string;             // Additional notes
+  clientVisitId?: string;     // caller-supplied idempotency key (UUID)
+  timezone?: string;          // IANA zone; overrides VISIT_TIMEZONE
+  dryRun?: boolean;           // validate and preview, write nothing
 }
 
 /**

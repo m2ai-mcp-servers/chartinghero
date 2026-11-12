@@ -46,8 +46,8 @@ export function resetPatientService(): void {
   syncFn = syncVisitToSupabase;
 }
 
-function requestContext(config: ChartingHeroConfig): RequestContext {
-  return { requestId: randomUUID(), timezone: config.visitTimezone ?? 'UTC' };
+function requestContext(config: ChartingHeroConfig, timezone?: string): RequestContext {
+  return { requestId: randomUUID(), timezone: timezone ?? config.visitTimezone ?? 'UTC' };
 }
 
 function practitionerFor(config: ChartingHeroConfig, backend: PatientBackend): WriteContext['practitioner'] {
@@ -137,12 +137,15 @@ export async function createVisitNote(params: CreateVisitNoteParams): Promise<Cr
   const backend = getBackend();
   const practitioner = practitionerFor(config, backend);
   const ctx: WriteContext = {
-    ...requestContext(config),
+    ...requestContext(config, params.timezone),
     practitioner,
-    idempotencyKey: createHash('sha256')
-      .update([params.patientId, params.visitDate, params.timeIn, practitioner.reference].join('|'))
-      .digest('hex'),
-    dryRun: false,
+    // Plan 3.3 step 2: the caller's clientVisitId when given, else a derived key.
+    idempotencyKey:
+      params.clientVisitId ??
+      createHash('sha256')
+        .update([params.patientId, params.visitDate, params.timeIn, practitioner.reference].join('|'))
+        .digest('hex'),
+    dryRun: params.dryRun === true,
   };
 
   let response: CreateVisitNoteResponse;
@@ -154,7 +157,7 @@ export async function createVisitNote(params: CreateVisitNoteParams): Promise<Cr
   }
 
   // Post-write projection hook. The message reports what actually happened.
-  if (response.success && response.visitNote && shouldProject(config, backend)) {
+  if (response.success && response.visitNote && !ctx.dryRun && shouldProject(config, backend)) {
     // The note is already written, so a sync failure must never turn into a tool error.
     const synced = await syncFn(response.visitNote).catch(() => false);
     if (synced) {

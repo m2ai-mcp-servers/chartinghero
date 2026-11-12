@@ -8,57 +8,11 @@ import { getPatientHistory } from '../services/patient-service.js';
 import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { errorLogFields, formatErrorForMcp } from '../utils/errors.js';
-import type { PatientHistoryParams, VisitType } from '../types/index.js';
-
-/**
- * Tool definition for MCP
- */
-export const getPatientHistoryTool = {
-  name: 'get_patient_history',
-  description: `Retrieve visit history for a patient from the connected EMR.
-
-Returns a list of previous visits with dates, types, and key information. Use this to review patient history before creating a new visit note.
-
-Use search_patient first to get the patient ID.`,
-  inputSchema: {
-    type: 'object' as const,
-    properties: {
-      patientId: {
-        type: 'string',
-        description: 'Patient ID from search_patient (e.g., PT-10001)',
-      },
-      limit: {
-        type: 'number',
-        description: 'Maximum number of visits to return (default: 10, max: 50)',
-      },
-      startDate: {
-        type: 'string',
-        description: 'Filter visits on or after this date (YYYY-MM-DD)',
-      },
-      endDate: {
-        type: 'string',
-        description: 'Filter visits on or before this date (YYYY-MM-DD)',
-      },
-      visitType: {
-        type: 'string',
-        enum: [
-          'skilled_nursing',
-          'physical_therapy',
-          'occupational_therapy',
-          'speech_therapy',
-          'home_health_aide',
-          'social_work',
-          'initial_assessment',
-          'recertification',
-          'discharge',
-          'other',
-        ],
-        description: 'Filter by visit type',
-      },
-    },
-    required: ['patientId'],
-  },
-};
+import { patientHistorySchema } from '../schemas/read-tools.js';
+import type { PatientHistoryInput } from '../schemas/read-tools.js';
+import type { VisitType } from '../types/index.js';
+import { READ_ANNOTATIONS } from './types.js';
+import type { ToolDefinition, ToolResult } from './types.js';
 
 /**
  * Format visit type for display
@@ -80,26 +34,21 @@ function formatVisitType(type: VisitType): string {
 }
 
 /**
- * Execute the get_patient_history tool
+ * Execute the get_patient_history tool. Arguments have passed patientHistorySchema.
  */
-export async function executeGetPatientHistory(
-  args: Record<string, unknown>
-): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
+export async function executeGetPatientHistory(args: PatientHistoryInput): Promise<ToolResult> {
   const config = getConfig();
 
   try {
-    const params: PatientHistoryParams = {
-      patientId: String(args.patientId || ''),
-      limit: Math.min(Number(args.limit) || 10, 50),
+    const response = await getPatientHistory({
+      patientId: args.patientId,
+      limit: args.limit ?? 10,
       offset: 0,
-      startDate: args.startDate as string | undefined,
-      endDate: args.endDate as string | undefined,
-      visitType: args.visitType as VisitType | undefined,
-    };
+      startDate: args.startDate,
+      endDate: args.endDate,
+      visitType: args.visitType,
+    });
 
-    const response = await getPatientHistory(params);
-
-    // Format response for Claude
     let resultText = '';
 
     if (config.backend === 'mock') {
@@ -111,11 +60,11 @@ export async function executeGetPatientHistory(
     if (response.visits.length === 0) {
       resultText += '_No visits found for the specified criteria._\n';
 
-      if (params.startDate || params.endDate || params.visitType) {
+      if (args.startDate || args.endDate || args.visitType) {
         resultText += '\nFilters applied:\n';
-        if (params.startDate) resultText += `  • From: ${params.startDate}\n`;
-        if (params.endDate) resultText += `  • To: ${params.endDate}\n`;
-        if (params.visitType) resultText += `  • Type: ${formatVisitType(params.visitType)}\n`;
+        if (args.startDate) resultText += `  • From: ${args.startDate}\n`;
+        if (args.endDate) resultText += `  • To: ${args.endDate}\n`;
+        if (args.visitType) resultText += `  • Type: ${formatVisitType(args.visitType)}\n`;
       }
     } else {
       resultText += `Showing ${response.visits.length} of ${response.total} visit(s):\n\n`;
@@ -147,3 +96,15 @@ export async function executeGetPatientHistory(
     };
   }
 }
+
+export const getPatientHistoryTool: ToolDefinition<typeof patientHistorySchema> = {
+  name: 'get_patient_history',
+  description: `Retrieve visit history for a patient from the connected EMR.
+
+Returns a list of previous visits with dates, types, and key information. Use this to review patient history before creating a new visit note.
+
+Use search_patient first to get the patient ID.`,
+  inputSchema: patientHistorySchema,
+  annotations: READ_ANNOTATIONS,
+  execute: executeGetPatientHistory,
+};

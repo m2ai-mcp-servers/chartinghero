@@ -8,143 +8,41 @@ import { createVisitNote } from '../services/patient-service.js';
 import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
 import { errorLogFields, formatErrorForMcp } from '../utils/errors.js';
-import type { CreateVisitNoteParams, VitalSigns, VisitType } from '../types/index.js';
+import { createVisitNoteSchema } from '../schemas/visit-note.js';
+import type { CreateVisitNoteInput } from '../schemas/visit-note.js';
+import type { VitalSigns } from '../types/index.js';
+import type { ToolDefinition, ToolResult } from './types.js';
+
+/** One line per recorded vital. `!== undefined` so a recorded 0 is shown. */
+function formatVitals(vs: VitalSigns): string {
+  let text = '';
+  if (vs.bloodPressureSystolic !== undefined && vs.bloodPressureDiastolic !== undefined) {
+    text += `  • BP: ${vs.bloodPressureSystolic}/${vs.bloodPressureDiastolic} mmHg\n`;
+  }
+  if (vs.heartRate !== undefined) text += `  • HR: ${vs.heartRate} bpm\n`;
+  if (vs.respiratoryRate !== undefined) text += `  • RR: ${vs.respiratoryRate} /min\n`;
+  if (vs.temperature !== undefined) text += `  • Temp: ${vs.temperature}°${vs.temperatureUnit}\n`;
+  if (vs.oxygenSaturation !== undefined) {
+    const flow = vs.oxygenFlowRate === undefined ? '' : vs.oxygenFlowRate === 0 ? ' on room air' : ` on ${vs.oxygenFlowRate} L/min O2`;
+    text += `  • O2 Sat: ${vs.oxygenSaturation}%${flow}\n`;
+  } else if (vs.oxygenFlowRate !== undefined) {
+    text += `  • O2 flow: ${vs.oxygenFlowRate} L/min\n`;
+  }
+  if (vs.weight !== undefined) text += `  • Weight: ${vs.weight} ${vs.weightUnit}\n`;
+  if (vs.painLevel !== undefined) text += `  • Pain: ${vs.painLevel}/10\n`;
+  if (vs.bloodGlucose !== undefined) text += `  • Glucose: ${vs.bloodGlucose} mg/dL\n`;
+  return text;
+}
 
 /**
- * Tool definition for MCP
+ * Execute the create_visit_note tool. Arguments have passed createVisitNoteSchema.
  */
-export const createVisitNoteTool = {
-  name: 'create_visit_note',
-  description: `Create a visit note for a patient in the connected EMR.
-
-This tool documents a home health visit including vital signs, assessment, and care plan. Use search_patient first to get the patient ID.
-
-Required fields: patientId, visitType, visitDate, timeIn, timeOut
-Recommended fields: vitalSigns, subjective, objective, assessment, plan`,
-  inputSchema: {
-    type: 'object' as const,
-    properties: {
-      patientId: {
-        type: 'string',
-        description: 'Patient ID from search_patient (e.g., PT-10001)',
-      },
-      visitType: {
-        type: 'string',
-        enum: [
-          'skilled_nursing',
-          'physical_therapy',
-          'occupational_therapy',
-          'speech_therapy',
-          'home_health_aide',
-          'social_work',
-          'initial_assessment',
-          'recertification',
-          'discharge',
-          'other',
-        ],
-        description: 'Type of visit',
-      },
-      visitDate: {
-        type: 'string',
-        description: 'Date of visit (YYYY-MM-DD format)',
-      },
-      timeIn: {
-        type: 'string',
-        description: 'Time nurse arrived (HH:MM format, 24-hour)',
-      },
-      timeOut: {
-        type: 'string',
-        description: 'Time nurse departed (HH:MM format, 24-hour)',
-      },
-      vitalSigns: {
-        type: 'object',
-        description: 'Vital signs recorded during visit',
-        properties: {
-          bloodPressureSystolic: { type: 'number', description: 'Systolic BP (mmHg)' },
-          bloodPressureDiastolic: { type: 'number', description: 'Diastolic BP (mmHg)' },
-          heartRate: { type: 'number', description: 'Heart rate (bpm)' },
-          respiratoryRate: { type: 'number', description: 'Respiratory rate (breaths/min)' },
-          temperature: { type: 'number', description: 'Temperature' },
-          temperatureUnit: { type: 'string', enum: ['F', 'C'], description: 'Temperature unit' },
-          oxygenSaturation: { type: 'number', description: 'O2 saturation (%)' },
-          weight: { type: 'number', description: 'Weight' },
-          weightUnit: { type: 'string', enum: ['lbs', 'kg'], description: 'Weight unit' },
-          painLevel: { type: 'number', description: 'Pain level (0-10)' },
-        },
-      },
-      subjective: {
-        type: 'string',
-        description: 'Patient\'s reported symptoms, concerns, and statements',
-      },
-      objective: {
-        type: 'string',
-        description: 'Nurse\'s observations and physical assessment findings',
-      },
-      assessment: {
-        type: 'string',
-        description: 'Clinical assessment and interpretation of findings',
-      },
-      plan: {
-        type: 'string',
-        description: 'Care plan and next steps',
-      },
-      interventions: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'List of interventions performed during visit',
-      },
-      patientResponse: {
-        type: 'string',
-        description: 'How patient responded to care/interventions',
-      },
-      education: {
-        type: 'array',
-        items: { type: 'string' },
-        description: 'Patient education topics covered',
-      },
-      nextVisitDate: {
-        type: 'string',
-        description: 'Scheduled next visit date (YYYY-MM-DD)',
-      },
-      notes: {
-        type: 'string',
-        description: 'Additional notes or comments',
-      },
-    },
-    required: ['patientId', 'visitType', 'visitDate', 'timeIn', 'timeOut'],
-  },
-};
-
-/**
- * Execute the create_visit_note tool
- */
-export async function executeCreateVisitNote(
-  args: Record<string, unknown>
-): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
+export async function executeCreateVisitNote(args: CreateVisitNoteInput): Promise<ToolResult> {
   const config = getConfig();
 
   try {
-    const params: CreateVisitNoteParams = {
-      patientId: String(args.patientId || ''),
-      visitType: args.visitType as VisitType,
-      visitDate: String(args.visitDate || ''),
-      timeIn: String(args.timeIn || ''),
-      timeOut: String(args.timeOut || ''),
-      vitalSigns: args.vitalSigns as VitalSigns | undefined,
-      subjective: args.subjective as string | undefined,
-      objective: args.objective as string | undefined,
-      assessment: args.assessment as string | undefined,
-      plan: args.plan as string | undefined,
-      interventions: args.interventions as string[] | undefined,
-      patientResponse: args.patientResponse as string | undefined,
-      education: args.education as string[] | undefined,
-      nextVisitDate: args.nextVisitDate as string | undefined,
-      notes: args.notes as string | undefined,
-    };
+    const response = await createVisitNote(args);
 
-    const response = await createVisitNote(params);
-
-    // Format response for Claude
     let resultText = '';
 
     if (config.backend === 'mock') {
@@ -152,43 +50,30 @@ export async function executeCreateVisitNote(
     }
 
     if (response.success) {
-      resultText += `✅ **Visit Note Created Successfully**\n\n`;
+      resultText += args.dryRun
+        ? `🔎 **Dry Run: Visit Note Validated, Nothing Written**\n\n`
+        : `✅ **Visit Note Created Successfully**\n\n`;
       resultText += `${response.message}\n\n`;
-      resultText += `• Note ID: ${response.visitNoteId}\n`;
+      if (!args.dryRun) resultText += `• Note ID: ${response.visitNoteId}\n`;
       if (response.visitNote?.status === 'pending_review') {
         resultText += `• Status: pending review (unsigned; the nurse signs in the EMR)\n`;
       }
-      resultText += `• Patient: ${params.patientId}\n`;
-      resultText += `• Visit Type: ${params.visitType}\n`;
-      resultText += `• Date: ${params.visitDate}\n`;
-      resultText += `• Time: ${params.timeIn} - ${params.timeOut}\n`;
+      resultText += `• Patient: ${args.patientId}\n`;
+      resultText += `• Visit Type: ${args.visitType}\n`;
+      resultText += `• Date: ${args.visitDate}\n`;
+      resultText += `• Time: ${args.timeIn} - ${args.timeOut}${args.overnight ? ' (next day)' : ''}\n`;
 
-      if (response.visitNote?.duration) {
+      if (response.visitNote?.duration !== undefined) {
         resultText += `• Duration: ${response.visitNote.duration} minutes\n`;
       }
 
-      if (params.vitalSigns) {
-        resultText += `\n**Vital Signs Recorded:**\n`;
-        const vs = params.vitalSigns;
-        if (vs.bloodPressureSystolic && vs.bloodPressureDiastolic) {
-          resultText += `  • BP: ${vs.bloodPressureSystolic}/${vs.bloodPressureDiastolic} mmHg\n`;
-        }
-        if (vs.heartRate) {
-          resultText += `  • HR: ${vs.heartRate} bpm\n`;
-        }
-        if (vs.temperature) {
-          resultText += `  • Temp: ${vs.temperature}°${vs.temperatureUnit || 'F'}\n`;
-        }
-        if (vs.oxygenSaturation) {
-          resultText += `  • O2 Sat: ${vs.oxygenSaturation}%\n`;
-        }
-        if (vs.weight) {
-          resultText += `  • Weight: ${vs.weight} ${vs.weightUnit || 'lbs'}\n`;
-        }
+      if (args.vitalSigns) {
+        const vitals = formatVitals(args.vitalSigns);
+        if (vitals) resultText += `\n**Vital Signs ${args.dryRun ? 'To Record' : 'Recorded'}:**\n${vitals}`;
       }
 
-      if (params.nextVisitDate) {
-        resultText += `\n📅 Next visit scheduled: ${params.nextVisitDate}\n`;
+      if (args.nextVisitDate) {
+        resultText += `\n📅 Next visit scheduled: ${args.nextVisitDate}\n`;
       }
     } else {
       resultText += `❌ **Failed to Create Visit Note**\n\n${response.message}`;
@@ -206,3 +91,19 @@ export async function executeCreateVisitNote(
     };
   }
 }
+
+export const createVisitNoteTool: ToolDefinition<typeof createVisitNoteSchema> = {
+  name: 'create_visit_note',
+  description: `Create a visit note for a patient in the connected EMR.
+
+This tool documents a home health visit including vital signs, assessment, and care plan. Use search_patient first to get the patient ID.
+
+Required fields: patientId, visitType, visitDate, timeIn, timeOut
+Recommended fields: vitalSigns, subjective, objective, assessment, plan
+
+Rules: timeOut must be after timeIn unless overnight is true. Blood pressure needs both values. temperature and weight need their unit. Set dryRun to preview without writing, and reuse clientVisitId on retry.`,
+  inputSchema: createVisitNoteSchema,
+  // idempotentHint stays false until the PR7 idempotency test passes.
+  annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  execute: executeCreateVisitNote,
+};

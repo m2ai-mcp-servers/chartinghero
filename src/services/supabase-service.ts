@@ -53,7 +53,8 @@ function transformVitals(vitals?: VitalSigns): Record<string, unknown> {
     painLevel: vitals.painLevel ?? null,
     weight: vitals.weight ?? null,
     weightUnit: vitals.weightUnit ?? 'lbs',
-    bloodGlucose: null, // ChartingHero doesn't have this field yet
+    oxygenFlowRate: vitals.oxygenFlowRate ?? null,
+    bloodGlucose: vitals.bloodGlucose ?? null,
     glucoseUnit: 'mg/dL',
     glucoseTiming: null,
   };
