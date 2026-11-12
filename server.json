@@ -1,16 +1,16 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.m2ai-mcp-servers/mcp-ratchet-clinical-charting",
+  "name": "io.github.m2ai-mcp-servers/chartinghero",
   "description": "MCP server for clinical charting with Claude - document patient visits to EMR",
   "repository": {
-    "url": "https://github.com/m2ai-mcp-servers/mcp-ratchet-clinical-charting",
+    "url": "https://github.com/m2ai-mcp-servers/chartinghero",
     "source": "github"
   },
   "version": "0.1.0",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "mcp-ratchet-clinical-charting",
+      "identifier": "chartinghero",
       "version": "0.1.0",
       "transport": {
         "type": "stdio"

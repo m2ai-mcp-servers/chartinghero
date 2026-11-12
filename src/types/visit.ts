@@ -2,7 +2,7 @@
  * Visit and clinical note type definitions
  *
  * Based on typical home health visit documentation patterns.
- * These types will be refined once PointCare API documentation is available.
+ * These types will be refined once a real EMR backend is available.
  */
 
 /**

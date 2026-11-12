@@ -1,7 +1,7 @@
 /**
  * get_patient_history MCP Tool
  *
- * Retrieves visit history for a patient from the PointCare EMR system.
+ * Retrieves visit history for a patient from the connected EMR.
  */
 
 import { getPatientHistory } from '../services/patient-service.js';
@@ -15,7 +15,7 @@ import type { PatientHistoryParams, VisitType } from '../types/index.js';
  */
 export const getPatientHistoryTool = {
   name: 'get_patient_history',
-  description: `Retrieve visit history for a patient from the PointCare EMR system.
+  description: `Retrieve visit history for a patient from the connected EMR.
 
 Returns a list of previous visits with dates, types, and key information. Use this to review patient history before creating a new visit note.
 
@@ -103,7 +103,7 @@ export async function executeGetPatientHistory(
     let resultText = '';
 
     if (config.mockMode) {
-      resultText += '⚠️ MOCK MODE: Using test data (PointCare API not connected)\n\n';
+      resultText += '⚠️ MOCK MODE: Using test data (no EMR connected)\n\n';
     }
 
     resultText += `**Visit History for ${response.patientName}** (${response.patientId})\n\n`;

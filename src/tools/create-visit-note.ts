@@ -1,7 +1,7 @@
 /**
  * create_visit_note MCP Tool
  *
- * Creates a visit note in the PointCare EMR system.
+ * Creates a visit note in the connected EMR.
  */
 
 import { createVisitNote } from '../services/patient-service.js';
@@ -15,7 +15,7 @@ import type { CreateVisitNoteParams, VitalSigns, VisitType } from '../types/inde
  */
 export const createVisitNoteTool = {
   name: 'create_visit_note',
-  description: `Create a visit note for a patient in the PointCare EMR system.
+  description: `Create a visit note for a patient in the connected EMR.
 
 This tool documents a home health visit including vital signs, assessment, and care plan. Use search_patient first to get the patient ID.
 
@@ -148,7 +148,7 @@ export async function executeCreateVisitNote(
     let resultText = '';
 
     if (config.mockMode) {
-      resultText += '⚠️ MOCK MODE: Using test data (PointCare API not connected)\n\n';
+      resultText += '⚠️ MOCK MODE: Using test data (no EMR connected)\n\n';
     }
 
     if (response.success) {

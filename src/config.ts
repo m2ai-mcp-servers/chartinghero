@@ -1,18 +1,18 @@
 /**
- * Configuration management for Ratchet MCP server
+ * Configuration management for ChartingHero MCP server
  *
  * Loads configuration from environment variables.
  * In mock mode, API credentials are not required.
  */
 
-export interface RatchetConfig {
+export interface ChartingHeroConfig {
   // API Configuration
   apiUrl: string;
   apiKey: string;
   clientId?: string;
   clientSecret?: string;
 
-  // Supabase Configuration (for PointCare EMR Dashboard)
+  // Supabase Configuration (for the ChartingHero demo dashboard)
   supabaseUrl?: string;
   supabaseKey?: string;
   supabaseEnabled: boolean;
@@ -28,7 +28,7 @@ export interface RatchetConfig {
 /**
  * Load configuration from environment variables
  */
-export function loadConfig(): RatchetConfig {
+export function loadConfig(): ChartingHeroConfig {
   const mockMode = process.env.RATCHET_MOCK_MODE === 'true' ||
                    !process.env.POINTCARE_API_URL;
 
@@ -51,7 +51,7 @@ export function loadConfig(): RatchetConfig {
 
     // Runtime settings
     mockMode,
-    logLevel: (process.env.LOG_LEVEL as RatchetConfig['logLevel']) || 'info',
+    logLevel: (process.env.LOG_LEVEL as ChartingHeroConfig['logLevel']) || 'info',
 
     // Timeouts
     requestTimeout: parseInt(process.env.REQUEST_TIMEOUT || '30000', 10),
@@ -61,7 +61,7 @@ export function loadConfig(): RatchetConfig {
 /**
  * Validate configuration for production use
  */
-export function validateConfig(config: RatchetConfig): string[] {
+export function validateConfig(config: ChartingHeroConfig): string[] {
   const errors: string[] = [];
 
   if (!config.mockMode) {
@@ -77,9 +77,9 @@ export function validateConfig(config: RatchetConfig): string[] {
 }
 
 // Singleton config instance
-let configInstance: RatchetConfig | null = null;
+let configInstance: ChartingHeroConfig | null = null;
 
-export function getConfig(): RatchetConfig {
+export function getConfig(): ChartingHeroConfig {
   if (!configInstance) {
     configInstance = loadConfig();
   }

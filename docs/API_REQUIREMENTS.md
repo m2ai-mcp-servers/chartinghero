@@ -1,5 +1,7 @@
 # PointCare API Requirements
 
+> **Historical (pre-pivot).** This document describes the original vendor-specific plan and is no longer current. The active plan is `docs/FHIR-PIVOT-PLAN.md`.
+
 This document outlines what information is needed from PointCare to complete the Ratchet MCP server.
 
 ## Status

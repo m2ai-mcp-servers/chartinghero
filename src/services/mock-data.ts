@@ -1,8 +1,8 @@
 /**
- * Mock data for testing Ratchet MCP server
+ * Mock data for testing ChartingHero MCP server
  *
  * This module provides realistic test data for development and testing
- * without requiring access to the PointCare API.
+ * without requiring access to a real EMR API.
  *
  * NOTE: All names, addresses, and identifiers are fictional.
  */
@@ -12,7 +12,6 @@ import type {
   PatientSearchResult,
   VisitNote,
   VisitNoteSummary,
-  VisitType,
 } from '../types/index.js';
 
 /**

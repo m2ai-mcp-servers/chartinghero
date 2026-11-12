@@ -1,19 +1,19 @@
 /**
- * Custom error classes for Ratchet MCP server
+ * Custom error classes for ChartingHero MCP server
  *
  * Errors are designed to be informative without exposing PHI.
  */
 
 /**
- * Base error class for Ratchet
+ * Base error class for ChartingHero
  */
-export class RatchetError extends Error {
+export class ChartingHeroError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
 
   constructor(message: string, code: string, statusCode: number = 500) {
     super(message);
-    this.name = 'RatchetError';
+    this.name = 'ChartingHeroError';
     this.code = code;
     this.statusCode = statusCode;
   }
@@ -30,7 +30,7 @@ export class RatchetError extends Error {
 /**
  * Configuration error - missing or invalid configuration
  */
-export class ConfigurationError extends RatchetError {
+export class ConfigurationError extends ChartingHeroError {
   constructor(message: string) {
     super(message, 'CONFIG_ERROR', 500);
     this.name = 'ConfigurationError';
@@ -40,7 +40,7 @@ export class ConfigurationError extends RatchetError {
 /**
  * Authentication error - API auth failed
  */
-export class AuthenticationError extends RatchetError {
+export class AuthenticationError extends ChartingHeroError {
   constructor(message: string = 'Authentication failed') {
     super(message, 'AUTH_ERROR', 401);
     this.name = 'AuthenticationError';
@@ -50,7 +50,7 @@ export class AuthenticationError extends RatchetError {
 /**
  * Not found error - resource not found
  */
-export class NotFoundError extends RatchetError {
+export class NotFoundError extends ChartingHeroError {
   constructor(resource: string) {
     // Don't include specific identifiers in error message
     super(`${resource} not found`, 'NOT_FOUND', 404);
@@ -61,7 +61,7 @@ export class NotFoundError extends RatchetError {
 /**
  * Validation error - invalid input
  */
-export class ValidationError extends RatchetError {
+export class ValidationError extends ChartingHeroError {
   public readonly field?: string;
 
   constructor(message: string, field?: string) {
@@ -79,9 +79,9 @@ export class ValidationError extends RatchetError {
 }
 
 /**
- * API error - error from PointCare API
+ * API error - error from the EMR API
  */
-export class ApiError extends RatchetError {
+export class ApiError extends ChartingHeroError {
   public readonly apiStatusCode?: number;
 
   constructor(message: string, apiStatusCode?: number) {
@@ -94,7 +94,7 @@ export class ApiError extends RatchetError {
 /**
  * Rate limit error - too many requests
  */
-export class RateLimitError extends RatchetError {
+export class RateLimitError extends ChartingHeroError {
   public readonly retryAfter?: number;
 
   constructor(retryAfter?: number) {
@@ -107,7 +107,7 @@ export class RateLimitError extends RatchetError {
 /**
  * Mock mode indicator - not a real error, used to indicate mock response
  */
-export class MockModeNotice extends RatchetError {
+export class MockModeNotice extends ChartingHeroError {
   constructor() {
     super('Running in mock mode - no real API calls made', 'MOCK_MODE', 200);
     this.name = 'MockModeNotice';
@@ -118,7 +118,7 @@ export class MockModeNotice extends RatchetError {
  * Format error for MCP tool response
  */
 export function formatErrorForMcp(error: unknown): { type: 'text'; text: string } {
-  if (error instanceof RatchetError) {
+  if (error instanceof ChartingHeroError) {
     return {
       type: 'text',
       text: `Error [${error.code}]: ${error.message}`,

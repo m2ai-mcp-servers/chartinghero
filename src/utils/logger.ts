@@ -1,5 +1,5 @@
 /**
- * Logger utility for Ratchet MCP server
+ * Logger utility for ChartingHero MCP server
  *
  * IMPORTANT: This logger is designed to NEVER log PHI (Protected Health Information).
  * All patient data must be sanitized before logging.
@@ -63,7 +63,7 @@ function sanitize(data: unknown): unknown {
  */
 function formatMessage(level: LogLevel, message: string, data?: unknown): string {
   const timestamp = new Date().toISOString();
-  const prefix = `[${timestamp}] [RATCHET] [${level.toUpperCase()}]`;
+  const prefix = `[${timestamp}] [CHARTINGHERO] [${level.toUpperCase()}]`;
 
   if (data !== undefined) {
     const sanitizedData = sanitize(data);
