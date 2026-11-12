@@ -28,7 +28,9 @@ Before a commit: `npx tsc --noEmit`, `npx jest`, `npx eslint "src/**/*.ts"`.
 
 ```
 src/
-├── index.ts           # MCP server entry point; config and backend fail closed at startup
+├── index.ts           # entry point; config and backend fail closed at startup
+├── server.ts          # McpServer + registerTool; the SDK validates every call against its zod schema
+├── schemas/           # zod input schemas (plausibility bounds, dates, times, overnight)
 ├── config.ts          # env config (section 3.2 of the plan); config/hosts.ts holds WRITE_HOSTS
 ├── legacy-env.ts      # the only reader of deprecated 0.1.0 env vars
 ├── backends/          # PatientBackend interface, mock backend, factory

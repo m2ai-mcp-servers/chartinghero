@@ -66,12 +66,14 @@ describe('positive control', () => {
       const { tools } = await client.listTools();
       expect(tools.map((t) => t.name).sort()).toEqual(['create_visit_note', 'get_patient_history', 'search_patient']);
 
-      // Object.prototype names must hit the unknown-tool path, not echo the arguments.
-      for (const name of ['constructor', 'toString', '__proto__']) {
+      // Object.prototype names must never execute or echo the arguments. Tool lookup is the
+      // SDK's since PR4: it reports these as "Tool <name> disabled" (its registry is a plain
+      // object), and a real unknown name as "not found". Either way, nothing runs.
+      for (const name of ['constructor', 'toString', '__proto__', 'no_such_tool']) {
         const res = await client.callTool({ name, arguments: { patientId: 'PT-SYNTH-1' } });
         expect(res.isError).toBe(true);
         expect(JSON.stringify(res)).not.toContain('PT-SYNTH-1');
-        expect(JSON.stringify(res.content)).toContain('Unknown tool');
+        expect(JSON.stringify(res.content)).toMatch(/Tool .* (not found|disabled)/);
       }
     } finally {
       await client.close();

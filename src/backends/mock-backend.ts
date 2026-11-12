@@ -131,7 +131,8 @@ export class MockBackend implements PatientBackend {
 
     const [inHour, inMin] = params.timeIn.split(':').map(Number);
     const [outHour, outMin] = params.timeOut.split(':').map(Number);
-    const duration = outHour * 60 + outMin - (inHour * 60 + inMin);
+    // An overnight visit ends the next day (plan Q8); the schema guarantees the order.
+    const duration = outHour * 60 + outMin - (inHour * 60 + inMin) + (params.overnight ? 24 * 60 : 0);
     const now = new Date().toISOString();
 
     // Unsigned: a nurse reviews and signs in the EMR. No auto-sign.
@@ -159,6 +160,15 @@ export class MockBackend implements PatientBackend {
       createdAt: now,
       updatedAt: now,
     };
+
+    if (ctx.dryRun) {
+      return {
+        success: true,
+        visitNoteId: '',
+        message: `Dry run: visit note for patient ${params.patientId} validated; nothing was written`,
+        visitNote,
+      };
+    }
 
     this.visits.push(visitNote);
 

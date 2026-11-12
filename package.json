@@ -41,8 +41,9 @@
     "url": "https://github.com/m2ai-mcp-servers/chartinghero/issues"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "@supabase/supabase-js": "^2.89.0"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@supabase/supabase-js": "^2.89.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
