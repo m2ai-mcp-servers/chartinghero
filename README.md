@@ -1,73 +1,65 @@
-# mcp-ratchet-clinical-charting
+# chartinghero
 
-**MCP server for clinical charting with Claude (codename: Ratchet)** - Enables Claude to document patient visits directly into Electronic Medical Records, reducing administrative burden for home health nurses.
+**MCP server for clinical charting with Claude.** Lets Claude search patients, document home health visits (SOAP note, vitals, interventions, education) and read visit history.
 
-> **Note:** Currently runs in Mock Mode for development/testing. Production EMR integration coming soon.
+> **Status:** mock backend only. The real backend is moving to standard FHIR R4 (US Core); see [docs/FHIR-PIVOT-PLAN.md](docs/FHIR-PIVOT-PLAN.md). Do not use with real patient data.
 
 ## Status
 
 | Component | Status |
 |-----------|--------|
-| MCP Server | ✅ Working (Mock Mode) |
-| Unit Tests | ✅ 20/20 Passing |
-| Claude Desktop | ✅ Ready for Testing |
-| PointCare API | ⏳ Pending API Documentation |
+| MCP server (stdio) | Working, mock backend |
+| Unit tests | `npm test` |
+| FHIR R4 backend | Planned for 0.2.0 |
+| Production EMR writes | Out of scope until SMART user auth (0.3.0) |
 
-**Current Mode:** Mock Mode - Uses realistic test data for development and testing.
+## Quick start
 
-## Quick Start
+### From npm
 
-### From npm (Recommended)
+The 0.1.0 npm release was published under an earlier package name, which will be deprecated. Until `chartinghero` is published, install from source.
 
-```bash
-npx mcp-ratchet-clinical-charting
-```
-
-### From Source
+### From source
 
 ```bash
-git clone https://github.com/m2ai-mcp-servers/mcp-ratchet-clinical-charting.git
-cd mcp-ratchet-clinical-charting
+git clone https://github.com/m2ai-mcp-servers/chartinghero.git
+cd chartinghero
 npm install
 npm run build
-npm run dev  # Development mode
-npm test     # Run tests
+npm test
 ```
 
-## Mock Mode
+## Mock mode
 
-Ratchet runs in **mock mode** by default when `POINTCARE_API_URL` is not configured. Mock mode:
-- Uses 5 fictional test patients
-- Stores visit notes in memory
-- Returns realistic responses
-- Perfect for development and Claude Desktop testing
+Mock mode is the default and the only working backend today. It:
+- uses 5 fictional test patients
+- stores visit notes in memory
+- prefixes every tool result with a mock-mode banner
 
-## Available Tools
+## Tools
 
-| Tool | Description | Mock Mode |
-|------|-------------|-----------|
-| `search_patient` | Find patient by name, ID, or phone | ✅ Working |
-| `create_visit_note` | Document a patient visit with vitals | ✅ Working |
-| `get_patient_history` | Retrieve patient visit history | ✅ Working |
+| Tool | Description |
+|------|-------------|
+| `search_patient` | Find a patient by name, ID, or phone |
+| `create_visit_note` | Document a visit with vitals and a SOAP note |
+| `get_patient_history` | List a patient's previous visits |
 
-### Example Usage (in Claude)
+### Example usage (in Claude)
 
 ```
 "Search for patient Eleanor Thompson"
 → Returns patient PT-10001 with demographics and status
 
 "Create a visit note for PT-10001 with blood pressure 120/80"
-→ Creates and stores visit note with vitals
+→ Creates and stores the visit note with vitals
 
 "Get visit history for PT-10001"
-→ Returns list of previous visits
+→ Returns the list of previous visits
 ```
 
-## Claude Desktop Integration
+## Claude Desktop
 
-### Configure Claude Desktop
-
-Add to your Claude Desktop config file:
+Add to the Claude Desktop config file:
 
 **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -75,47 +67,19 @@ Add to your Claude Desktop config file:
 ```json
 {
   "mcpServers": {
-    "ratchet": {
-      "command": "npx",
-      "args": ["-y", "mcp-ratchet-clinical-charting"]
+    "chartinghero": {
+      "command": "node",
+      "args": ["/absolute/path/to/chartinghero/dist/index.js"]
     }
   }
 }
 ```
 
-For production mode with EMR integration:
+Restart Claude Desktop, then check that `search_patient`, `create_visit_note` and `get_patient_history` are listed. Try: "Search for patient Eleanor".
 
-```json
-{
-  "mcpServers": {
-    "ratchet": {
-      "command": "npx",
-      "args": ["-y", "mcp-ratchet-clinical-charting"],
-      "env": {
-        "POINTCARE_API_URL": "https://api.pointcare.com",
-        "POINTCARE_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
+## Test patients (mock mode)
 
-### Step 3: Restart Claude Desktop
-
-Restart Claude Desktop to load the new MCP server.
-
-### Step 4: Verify
-
-In Claude Desktop, you should see:
-- `search_patient` tool available
-- `create_visit_note` tool available
-- `get_patient_history` tool available
-
-Try: "Search for patient Eleanor"
-
-## Test Patients (Mock Mode)
-
-| ID | Name | Status | Primary Diagnosis |
+| ID | Name | Status | Primary diagnosis |
 |----|------|--------|-------------------|
 | PT-10001 | Eleanor Thompson | Active | Type 2 Diabetes, CHF |
 | PT-10002 | Robert Martinez | Active | COPD, Post-surgical |
@@ -123,63 +87,30 @@ Try: "Search for patient Eleanor"
 | PT-10004 | James Thompson | Active | Post-stroke rehab |
 | PT-10005 | Dorothy Anderson | Discharged | Hip replacement |
 
-## Origin Story
-
-Ratchet evolved from the **M2AI NurseCall** n8n workflow, built to help home health nurses with visit documentation:
-
-```
-Current Flow (M2AI NurseCall):
-┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-│ Twilio  │───>│  n8n    │───>│  VAPI   │───>│  Email  │
-│  SMS    │    │ Workflow│    │  Call   │    │ Summary │
-└─────────┘    └─────────┘    └─────────┘    └─────────┘
-```
-
-**The Problem:** Visit notes go to email but still need manual entry into PointCare EMR.
-
-**Ratchet's Solution:**
-```
-Future Flow (with Ratchet):
-┌─────────┐    ┌─────────┐    ┌──────────┐    ┌───────────┐
-│ Twilio  │───>│  n8n    │───>│ Ratchet  │───>│ PointCare │
-│  SMS    │    │ Workflow│    │   MCP    │    │    EMR    │
-└─────────┘    └─────────┘    └──────────┘    └───────────┘
-```
-
 ## Configuration
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `POINTCARE_API_URL` | No* | PointCare API base URL |
-| `POINTCARE_API_KEY` | No* | API key or token |
-| `RATCHET_MOCK_MODE` | No | Force mock mode (`true`/`false`) |
-| `LOG_LEVEL` | No | Logging level (`debug`/`info`/`warn`/`error`) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | No | Sync mock visits to the [demo dashboard](https://github.com/m2ai-mcp-servers/chartinghero-demo-emr). Synthetic data only. |
+| `LOG_LEVEL` | No | `debug`, `info`, `warn` or `error` |
 
-*Required for production use. Mock mode activates when not set.
+Backend selection (`BACKEND`, `FHIR_*`) arrives with the FHIR backend; the earlier vendor-specific variables are being retired.
 
-## Project Structure
+## Project structure
 
 ```
-ratchet/
+chartinghero/
 ├── src/
 │   ├── index.ts              # MCP server entry point
-│   ├── config.ts             # Configuration management
-│   ├── tools/                # Tool implementations
-│   │   ├── search-patient.ts
-│   │   ├── create-visit-note.ts
-│   │   └── get-patient-history.ts
-│   ├── services/             # Business logic
-│   │   ├── patient-service.ts
-│   │   └── mock-data.ts
-│   ├── types/                # TypeScript types
+│   ├── config.ts             # Configuration
+│   ├── tools/                # search-patient, create-visit-note, get-patient-history
+│   ├── services/             # patient-service, mock-data, supabase-service
+│   ├── types/                # Patient and visit types
 │   └── utils/                # Logger, errors
 ├── tests/
 │   └── patient-service.test.ts
-├── dist/                     # Compiled output
-├── prds/
-│   └── RATCHET-PRD.yaml
 ├── docs/
-│   └── API_REQUIREMENTS.md
+│   └── FHIR-PIVOT-PLAN.md    # Backend pivot plan
 ├── package.json
 ├── tsconfig.json
 └── jest.config.js
@@ -188,35 +119,15 @@ ratchet/
 ## Development
 
 ```bash
-# Run in watch mode
-npm run dev
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm test -- --coverage
-
-# Lint
-npm run lint
+npm run dev    # run with tsx
+npm test       # jest
+npm run lint   # eslint
 ```
 
-## Next Steps
+## Related projects
 
-1. **Acquire PointCare API documentation** - See `docs/API_REQUIREMENTS.md`
-2. **Complete PRD** - Fill in tool specifications with real API details
-3. **Implement real API calls** - Replace mock responses
-4. **Integration testing** - Test with PointCare sandbox
-
-## Related Projects
-
-- **[GRIMLOCK](https://github.com/m2ai-portfolio/grimlock)** - Autonomous MCP Server Factory
-- **[ratchet-demo-emr](https://github.com/m2ai-mcp-servers/ratchet-demo-emr)** - Demo EMR React app for testing
+- **[chartinghero-demo-emr](https://github.com/m2ai-mcp-servers/chartinghero-demo-emr)**: demo EMR dashboard that displays visits written by this server.
 
 ## License
 
 MIT
-
----
-
-*Built with [GRIMLOCK](https://github.com/m2ai-portfolio/grimlock) - Autonomous MCP Server Factory*

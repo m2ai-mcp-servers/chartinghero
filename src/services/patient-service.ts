@@ -2,7 +2,7 @@
  * Patient Service - Business logic for patient operations
  *
  * This service handles all patient-related operations. In mock mode,
- * it uses the mock data layer. When the PointCare API is available,
+ * it uses the mock data layer. When a real EMR backend is available,
  * it will make real API calls.
  */
 
@@ -51,7 +51,7 @@ export async function searchPatients(
     const limit = params.limit || 10;
     const offset = params.offset || 0;
 
-    let filtered = mockPatients.filter((patient) => {
+    const filtered = mockPatients.filter((patient) => {
       // Filter by status if specified
       if (params.status && patient.status !== params.status) {
         return false;

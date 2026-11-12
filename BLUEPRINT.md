@@ -1,5 +1,7 @@
 # Ratchet MCP - Blueprint
 
+> **Historical (pre-pivot).** This document describes the original vendor-specific plan and is no longer current. The active plan is `docs/FHIR-PIVOT-PLAN.md`.
+
 Phase tracking document for Ratchet MCP server development.
 
 ## Current Status

@@ -1,11 +1,11 @@
 {
-  "name": "mcp-ratchet-clinical-charting",
+  "name": "chartinghero",
   "version": "0.1.0",
   "description": "MCP server for clinical charting with Claude - document patient visits directly into EMR",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mcp-ratchet-clinical-charting": "dist/index.js"
+    "chartinghero": "dist/index.js"
   },
   "files": [
     "dist",
@@ -31,14 +31,14 @@
   ],
   "author": "Matthew Snow <matthew@memyselfplusai.com>",
   "license": "MIT",
-  "mcpName": "io.github.m2ai-mcp-servers/mcp-ratchet-clinical-charting",
+  "mcpName": "io.github.m2ai-mcp-servers/chartinghero",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/m2ai-mcp-servers/mcp-ratchet-clinical-charting.git"
+    "url": "git+https://github.com/m2ai-mcp-servers/chartinghero.git"
   },
-  "homepage": "https://github.com/m2ai-mcp-servers/mcp-ratchet-clinical-charting#readme",
+  "homepage": "https://github.com/m2ai-mcp-servers/chartinghero#readme",
   "bugs": {
-    "url": "https://github.com/m2ai-mcp-servers/mcp-ratchet-clinical-charting/issues"
+    "url": "https://github.com/m2ai-mcp-servers/chartinghero/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

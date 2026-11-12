@@ -2,7 +2,7 @@
  * Patient-related type definitions
  *
  * Based on typical EMR data structures. These types will be refined
- * once PointCare API documentation is available.
+ * once a real EMR backend is available.
  */
 
 /**

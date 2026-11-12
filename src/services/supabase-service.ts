@@ -1,8 +1,8 @@
 /**
- * Supabase Service - Writes visit data to PointCare EMR Dashboard
+ * Supabase Service - Writes visit data to the ChartingHero demo dashboard
  *
  * This service syncs visit notes to Supabase so the dashboard can
- * display real-time updates when nurses document visits via Ratchet.
+ * display real-time updates when nurses document visits via ChartingHero.
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -31,7 +31,7 @@ function getSupabaseClient(): SupabaseClient | null {
 }
 
 /**
- * Transform Ratchet VitalSigns to Supabase format
+ * Transform ChartingHero VitalSigns to Supabase format
  */
 function transformVitals(vitals?: VitalSigns): Record<string, unknown> {
   if (!vitals) return {};
@@ -47,7 +47,7 @@ function transformVitals(vitals?: VitalSigns): Record<string, unknown> {
     painLevel: vitals.painLevel ?? null,
     weight: vitals.weight ?? null,
     weightUnit: vitals.weightUnit ?? 'lbs',
-    bloodGlucose: null, // Ratchet doesn't have this field yet
+    bloodGlucose: null, // ChartingHero doesn't have this field yet
     glucoseUnit: 'mg/dL',
     glucoseTiming: null,
   };
@@ -55,7 +55,7 @@ function transformVitals(vitals?: VitalSigns): Record<string, unknown> {
 
 /**
  * Transform interventions array to Supabase format
- * Ratchet uses string[], Supabase expects [{code, description, completed}]
+ * ChartingHero uses string[], Supabase expects [{code, description, completed}]
  */
 function transformInterventions(interventions?: string[]): Array<{
   code: string;
@@ -89,7 +89,7 @@ function transformEducation(education?: string[]): Array<{
 }
 
 /**
- * Transform Ratchet VisitNote to Supabase schema
+ * Transform ChartingHero VisitNote to Supabase schema
  */
 function transformVisitToSupabase(visit: VisitNote): Record<string, unknown> {
   return {
@@ -133,7 +133,7 @@ export async function syncVisitToSupabase(visit: VisitNote): Promise<boolean> {
       patientId: visit.patientId,
     });
 
-    const { data, error } = await client
+    const { error } = await client
       .from('visits')
       .upsert(supabaseData, { onConflict: 'id' })
       .select();

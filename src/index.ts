@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 
 /**
- * Ratchet MCP Server
+ * ChartingHero MCP Server
  *
- * MCP server for PointCare EMR integration.
+ * MCP server for clinical charting against an EMR backend.
  * Enables Claude to document patient visits directly into EMR.
  *
- * In mock mode (default when API not configured), uses realistic test data.
- * When PointCare API is available, set POINTCARE_API_URL and POINTCARE_API_KEY.
+ * In mock mode (default when no backend is configured), uses fictional test data.
+ * Backend configuration is described in the README.
  */
+
+import { createRequire } from 'node:module';
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -28,6 +30,8 @@ import {
   executeGetPatientHistory,
 } from './tools/index.js';
 
+const { version: VERSION } = createRequire(import.meta.url)('../package.json') as { version: string };
+
 // Load configuration
 const config = getConfig();
 
@@ -41,8 +45,8 @@ if (configErrors.length > 0 && !config.mockMode) {
 // Create MCP server instance
 const server = new Server(
   {
-    name: 'ratchet-mcp',
-    version: '0.1.0',
+    name: 'chartinghero',
+    version: VERSION,
   },
   {
     capabilities: {
@@ -117,8 +121,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
-  logger.info('Starting Ratchet MCP server', {
-    version: '0.1.0',
+  logger.info('Starting ChartingHero MCP server', {
+    version: VERSION,
     mockMode: config.mockMode,
     supabaseEnabled: config.supabaseEnabled,
   });
@@ -136,7 +140,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  logger.info('Ratchet MCP server running on stdio');
+  logger.info('ChartingHero MCP server running on stdio');
 }
 
 main().catch((error) => {

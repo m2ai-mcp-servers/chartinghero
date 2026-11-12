@@ -1,13 +1,13 @@
 /**
  * search_patient MCP Tool
  *
- * Searches for patients in the PointCare EMR system.
+ * Searches for patients in the connected EMR.
  */
 
 import { searchPatients } from '../services/patient-service.js';
 import { getConfig } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { formatErrorForMcp, RatchetError } from '../utils/errors.js';
+import { formatErrorForMcp } from '../utils/errors.js';
 import type { PatientSearchParams } from '../types/index.js';
 
 /**
@@ -15,7 +15,7 @@ import type { PatientSearchParams } from '../types/index.js';
  */
 export const searchPatientTool = {
   name: 'search_patient',
-  description: `Search for a patient in the PointCare EMR system by name, ID, or phone number.
+  description: `Search for a patient in the connected EMR by name, ID, or phone number.
 
 Returns matching patient records with basic information. Use this tool to find patients before creating visit notes or retrieving history.
 
@@ -72,7 +72,7 @@ export async function executeSearchPatient(
     let resultText = '';
 
     if (config.mockMode) {
-      resultText += '⚠️ MOCK MODE: Using test data (PointCare API not connected)\n\n';
+      resultText += '⚠️ MOCK MODE: Using test data (no EMR connected)\n\n';
     }
 
     if (response.results.length === 0) {
