@@ -7,7 +7,7 @@
 import { getPatientHistory } from '../services/patient-service.js';
 import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { formatErrorForMcp } from '../utils/errors.js';
+import { errorLogFields, formatErrorForMcp } from '../utils/errors.js';
 import type { PatientHistoryParams, VisitType } from '../types/index.js';
 
 /**
@@ -139,7 +139,7 @@ export async function executeGetPatientHistory(
       content: [{ type: 'text', text: resultText }],
     };
   } catch (error) {
-    logger.error('get_patient_history failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+    logger.error('Tool failed', { tool: 'get_patient_history', ...errorLogFields(error) });
 
     return {
       content: [formatErrorForMcp(error)],

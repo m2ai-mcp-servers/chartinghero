@@ -7,10 +7,16 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { getConfig } from '../config.js';
-import { logger } from '../utils/logger.js';
+import { hashId, logger } from '../utils/logger.js';
+import { errorLogFields } from '../utils/errors.js';
 import type { VisitNote, VitalSigns } from '../types/index.js';
 
 let supabaseClient: SupabaseClient | null = null;
+
+/** PostgREST/Postgres error codes are short tokens (e.g. 23503, PGRST116); never log the message. */
+function safeCode(code: unknown): string {
+  return typeof code === 'string' && /^[A-Z0-9]{1,10}$/.test(code) ? `DB_${code}` : 'DB_ERROR';
+}
 
 /**
  * Get or create Supabase client
@@ -116,22 +122,19 @@ function transformVisitToSupabase(visit: VisitNote): Record<string, unknown> {
  * Sync a visit note to Supabase (upsert)
  */
 export async function syncVisitToSupabase(visit: VisitNote): Promise<boolean> {
-  const client = getSupabaseClient();
-
-  if (!client) {
-    logger.debug('Supabase not configured, skipping sync');
-    return false;
-  }
-
   const startTime = Date.now();
 
   try {
+    // Inside the try: createClient throws on a malformed URL, and the note is already written.
+    const client = getSupabaseClient();
+    if (!client) {
+      logger.debug('Supabase not configured, skipping sync');
+      return false;
+    }
+
     const supabaseData = transformVisitToSupabase(visit);
 
-    logger.info('Syncing visit to Supabase', {
-      visitId: visit.id,
-      patientId: visit.patientId,
-    });
+    logger.info('Syncing visit to dashboard', { visitIdHash: hashId(visit.id) });
 
     const { error } = await client
       .from('visits')
@@ -139,25 +142,15 @@ export async function syncVisitToSupabase(visit: VisitNote): Promise<boolean> {
       .select();
 
     if (error) {
-      logger.error('Supabase sync failed', {
-        error: error.message,
-        code: error.code,
-        visitId: visit.id,
-      });
+      logger.error('Dashboard sync failed', { status: safeCode(error.code), visitIdHash: hashId(visit.id) });
       return false;
     }
 
-    logger.info('Supabase sync successful', {
-      visitId: visit.id,
-      duration: Date.now() - startTime,
-    });
+    logger.info('Dashboard sync successful', { visitIdHash: hashId(visit.id), durationMs: Date.now() - startTime });
 
     return true;
   } catch (err) {
-    logger.error('Supabase sync error', {
-      error: err instanceof Error ? err.message : 'Unknown error',
-      visitId: visit.id,
-    });
+    logger.error('Dashboard sync error', { ...errorLogFields(err), visitIdHash: hashId(visit.id) });
     return false;
   }
 }
@@ -169,14 +162,13 @@ export async function updateVisitInSupabase(
   visitId: string,
   updates: Partial<VisitNote>
 ): Promise<boolean> {
-  const client = getSupabaseClient();
-
-  if (!client) {
-    logger.debug('Supabase not configured, skipping update');
-    return false;
-  }
-
   try {
+    const client = getSupabaseClient();
+    if (!client) {
+      logger.debug('Supabase not configured, skipping update');
+      return false;
+    }
+
     const supabaseUpdates: Record<string, unknown> = {};
 
     // Map fields to snake_case
@@ -220,20 +212,14 @@ export async function updateVisitInSupabase(
       .eq('id', visitId);
 
     if (error) {
-      logger.error('Supabase update failed', {
-        error: error.message,
-        visitId,
-      });
+      logger.error('Dashboard update failed', { status: safeCode(error.code), visitIdHash: hashId(visitId) });
       return false;
     }
 
-    logger.info('Supabase update successful', { visitId });
+    logger.info('Dashboard update successful', { visitIdHash: hashId(visitId) });
     return true;
   } catch (err) {
-    logger.error('Supabase update error', {
-      error: err instanceof Error ? err.message : 'Unknown error',
-      visitId,
-    });
+    logger.error('Dashboard update error', { ...errorLogFields(err), visitIdHash: hashId(visitId) });
     return false;
   }
 }

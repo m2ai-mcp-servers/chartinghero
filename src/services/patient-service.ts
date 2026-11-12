@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { getConfig } from '../config.js';
 import type { ChartingHeroConfig } from '../config.js';
-import { logger } from '../utils/logger.js';
+import { hashId, logger } from '../utils/logger.js';
 import { ValidationError } from '../utils/errors.js';
 import { createBackend } from '../backends/factory.js';
 import { MOCK_PRACTITIONER } from '../backends/mock-backend.js';
@@ -75,7 +75,7 @@ export function shouldProject(config: ChartingHeroConfig, backend: PatientBacken
 export async function searchPatients(params: PatientSearchParams): Promise<PatientSearchResponse> {
   const config = getConfig();
   const startTime = Date.now();
-  logger.info('Searching patients', { searchType: params.searchType, hasQuery: !!params.query });
+  logger.info('Searching patients', { tool: 'search_patient' });
 
   requireText(params.query, 'Search query is required', 'query');
 
@@ -92,7 +92,7 @@ export async function searchPatients(params: PatientSearchParams): Promise<Patie
 export async function getPatient(patientId: string): Promise<Patient> {
   const config = getConfig();
   const startTime = Date.now();
-  logger.info('Getting patient', { hasPatientId: !!patientId });
+  logger.info('Getting patient');
 
   requireText(patientId, 'Patient ID is required', 'patientId');
 
@@ -109,7 +109,7 @@ export async function getPatient(patientId: string): Promise<Patient> {
 export async function getPatientHistory(params: PatientHistoryParams): Promise<PatientHistoryResponse> {
   const config = getConfig();
   const startTime = Date.now();
-  logger.info('Getting patient history', { hasPatientId: !!params.patientId });
+  logger.info('Getting patient history', { tool: 'get_patient_history' });
 
   requireText(params.patientId, 'Patient ID is required', 'patientId');
 
@@ -126,7 +126,7 @@ export async function getPatientHistory(params: PatientHistoryParams): Promise<P
 export async function createVisitNote(params: CreateVisitNoteParams): Promise<CreateVisitNoteResponse> {
   const config = getConfig();
   const startTime = Date.now();
-  logger.info('Creating visit note', { hasPatientId: !!params.patientId, visitType: params.visitType });
+  logger.info('Creating visit note', { tool: 'create_visit_note' });
 
   requireText(params.patientId, 'Patient ID is required', 'patientId');
   if (!params.visitType) throw new ValidationError('Visit type is required', 'visitType');
@@ -155,12 +155,13 @@ export async function createVisitNote(params: CreateVisitNoteParams): Promise<Cr
 
   // Post-write projection hook. The message reports what actually happened.
   if (response.success && response.visitNote && shouldProject(config, backend)) {
-    const synced = await syncFn(response.visitNote);
+    // The note is already written, so a sync failure must never turn into a tool error.
+    const synced = await syncFn(response.visitNote).catch(() => false);
     if (synced) {
-      logger.info('Visit synced to dashboard', { visitId: response.visitNoteId });
+      logger.info('Visit synced to dashboard', { visitIdHash: hashId(response.visitNoteId) });
       response.message += ' (synced to dashboard)';
     } else {
-      logger.warn('Dashboard sync failed', { visitId: response.visitNoteId });
+      logger.warn('Dashboard sync failed', { visitIdHash: hashId(response.visitNoteId) });
       response.message += ' (dashboard sync failed)';
     }
   }

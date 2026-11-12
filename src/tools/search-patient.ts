@@ -7,7 +7,7 @@
 import { searchPatients } from '../services/patient-service.js';
 import { getConfig, MOCK_BANNER } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { formatErrorForMcp } from '../utils/errors.js';
+import { errorLogFields, formatErrorForMcp } from '../utils/errors.js';
 import type { PatientSearchParams } from '../types/index.js';
 
 /**
@@ -102,7 +102,7 @@ export async function executeSearchPatient(
       content: [{ type: 'text', text: resultText }],
     };
   } catch (error) {
-    logger.error('search_patient failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+    logger.error('Tool failed', { tool: 'search_patient', ...errorLogFields(error) });
 
     return {
       content: [formatErrorForMcp(error)],

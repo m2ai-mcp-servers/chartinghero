@@ -23,6 +23,7 @@ import { ConfigError, getConfig, MOCK_BANNER } from './config.js';
 import type { ChartingHeroConfig } from './config.js';
 import { getBackend } from './services/patient-service.js';
 import { logger } from './utils/logger.js';
+import { errorLogFields, formatErrorForMcp } from './utils/errors.js';
 import {
   searchPatientTool,
   executeSearchPatient,
@@ -97,17 +98,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
-  logger.info('Tool called', { tool: name });
+  logger.info('Tool called', { tool: TOOLS.some((t) => t.name === name) ? name : 'unknown' });
 
-  const executor = toolExecutors[name];
+  // Own properties only: a name like 'constructor' must not resolve to Object.prototype.
+  const executor = Object.hasOwn(toolExecutors, name) ? toolExecutors[name] : undefined;
 
   if (!executor) {
-    logger.warn('Unknown tool requested', { tool: name });
+    logger.warn('Unknown tool requested');
     return {
       content: [
         {
           type: 'text',
-          text: `Unknown tool: ${name}. Available tools: ${TOOLS.map(t => t.name).join(', ')}`,
+          text: `Unknown tool. Available tools: ${TOOLS.map(t => t.name).join(', ')}`,
         },
       ],
       isError: true,
@@ -118,29 +120,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const result = await executor(args || {});
     return result;
   } catch (error) {
-    logger.error('Tool execution failed', {
-      tool: name,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Tool execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      ],
-      isError: true,
-    };
+    logger.error('Tool execution failed', { tool: name, ...errorLogFields(error) });
+    return { content: [formatErrorForMcp(error)], isError: true };
   }
 });
 
 // Start the server
 async function main() {
-  logger.info('Starting ChartingHero MCP server', {
-    version: VERSION,
-    backend: config.backend,
-    dashboardSync: config.dashboardSync,
-  });
+  logger.info(
+    `Starting ChartingHero MCP server v${VERSION} (backend=${config.backend}, dashboardSync=${config.dashboardSync ? 'on' : 'off'})`
+  );
 
   if (config.backendDefaulted) {
     logger.warn(`BACKEND not set: using the mock backend. ${MOCK_BANNER} Set BACKEND=mock to make this explicit.`);
@@ -159,6 +148,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  logger.error('Fatal error', { error: error instanceof Error ? error.message : 'Unknown error' });
+  logger.error('Fatal error', errorLogFields(error));
   process.exit(1);
 });
