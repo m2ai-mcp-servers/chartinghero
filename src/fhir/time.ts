@@ -84,3 +84,13 @@ export function visitPeriod(
   if (Date.parse(end) <= Date.parse(start)) throw new Error('visit period does not run forward');
   return { start, end };
 }
+
+/** The calendar date (YYYY-MM-DD) of a FHIR instant as seen in `timeZone`. */
+export function localDateOf(instant: string, timeZone: string): string | undefined {
+  const ms = Date.parse(instant);
+  if (Number.isNaN(ms)) return undefined;
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(new Date(ms));
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}

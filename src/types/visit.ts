@@ -125,6 +125,8 @@ export interface PatientHistoryParams {
   patientId: string;
   limit?: number;
   offset?: number;
+  /** Opaque cursor from a previous response's nextCursor. */
+  cursor?: string;
   startDate?: string;
   endDate?: string;
   visitType?: VisitType;
@@ -138,9 +140,13 @@ export interface PatientHistoryResponse {
   patientName: string;
   visits: VisitNoteSummary[];
   total: number;
+  /** True when more pages exist and `total` only counts what has been seen so far. */
+  totalIsLowerBound?: boolean;
   limit: number;
   offset: number;
   hasMore: boolean;
+  /** Pass back as `cursor` for the next page. Absent on the last page. */
+  nextCursor?: string;
 }
 
 /**

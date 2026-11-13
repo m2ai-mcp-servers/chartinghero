@@ -159,3 +159,28 @@ describe('WRITE_HOSTS', () => {
     expect(isWriteHost('127.0.0.2')).toBe(false);
   });
 });
+
+describe('FHIR_BEARER_TOKEN transport', () => {
+  const refusal = 'FHIR_BEARER_TOKEN refused';
+  test('refused over plain http to a host that is not loopback', () => {
+    expectRejected({ ...V, BACKEND: 'fhir', FHIR_BASE_URL: 'http://10.0.0.46:8080/fhir', FHIR_BEARER_TOKEN: 'synthetic-token' }, refusal);
+  });
+
+  test.each(['http://127.0.0.1:8080/fhir', 'http://localhost:8080/fhir', 'http://[::1]:8080/fhir', 'https://10.0.0.46/fhir'])(
+    'allowed for %s',
+    (FHIR_BASE_URL) => {
+      expect(problemsFor({ ...V, BACKEND: 'fhir', FHIR_BASE_URL, FHIR_BEARER_TOKEN: 'synthetic-token' })).toEqual([]);
+    }
+  );
+
+  test.each(['HTTP://10.0.0.46:8080/fhir', 'Http://10.0.0.46:8080/fhir', ' http://10.0.0.46/fhir'])(
+    'refused however the scheme is spelled: "%s"',
+    (FHIR_BASE_URL) => {
+      expectRejected({ ...V, BACKEND: 'fhir', FHIR_BASE_URL, FHIR_BEARER_TOKEN: 'synthetic-token' }, refusal);
+    }
+  );
+
+  test('plain http without a token is not this gate', () => {
+    expect(problemsFor({ ...V, BACKEND: 'fhir', FHIR_BASE_URL: 'http://10.0.0.46:8080/fhir' })).toEqual([]);
+  });
+});

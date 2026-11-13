@@ -7,9 +7,11 @@
 
 import { randomUUID } from 'node:crypto';
 
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 import { mockPatients, mockVisitNotes } from '../services/mock-data.js';
 import { toSearchResult, toVisitSummary } from '../mappers/dto.js';
+import { decodeCursor, encodeCursor } from './cursor.js';
+import { parseNameQuery } from './query.js';
 import type {
   PatientBackend,
   PatientRef,
@@ -34,6 +36,21 @@ export const MOCK_PRACTITIONER: WriteContext['practitioner'] = {
   display: 'Avery Quinn, RN',
   source: 'configured-sandbox',
 };
+
+type MockCursor = { k: 'mock-search' | 'mock-history'; offset: number; q: string };
+
+/**
+ * Where a page starts: the signed cursor when given, else the legacy offset. A cursor is
+ * only good for the request it came from (`q`): the same patient and the same filters.
+ */
+function pageStart(cursor: string | undefined, kind: MockCursor['k'], q: string, offset: number | undefined): number {
+  if (!cursor) return offset || 0;
+  const decoded = decodeCursor<MockCursor>(cursor, kind);
+  if (decoded.q !== q) {
+    throw new ValidationError('cursor belongs to a different request; repeat the request without it', 'cursor');
+  }
+  return decoded.offset;
+}
 
 export class MockBackend implements PatientBackend {
   readonly kind = 'mock' as const;
@@ -60,8 +77,15 @@ export class MockBackend implements PatientBackend {
     const query = params.query.toLowerCase().trim();
     const searchType = params.searchType || 'all';
     const limit = params.limit || 10;
-    const offset = params.offset || 0;
+    const q = JSON.stringify([query, searchType, params.status ?? '']);
+    const offset = pageStart(params.cursor, 'mock-search', q, params.offset);
     const queryDigits = query.replace(/\D/g, '');
+    // "Thompson 1960-04-30": every name word must appear, and the date must be the DOB.
+    const name = parseNameQuery(query);
+    const nameMatches = (fullName: string, dob: string) =>
+      name.tokens.length > 0 &&
+      name.tokens.every((t) => fullName.includes(t)) &&
+      (!name.birthDate || dob === name.birthDate);
 
     const filtered = this.patients.filter((patient) => {
       if (params.status && patient.status !== params.status) return false;
@@ -72,7 +96,7 @@ export class MockBackend implements PatientBackend {
 
       switch (searchType) {
         case 'name':
-          return fullName.includes(query);
+          return nameMatches(fullName, patient.demographics.dateOfBirth);
         case 'id':
           return id.includes(query);
         case 'phone':
@@ -80,7 +104,7 @@ export class MockBackend implements PatientBackend {
         case 'all':
         default:
           return (
-            fullName.includes(query) ||
+            nameMatches(fullName, patient.demographics.dateOfBirth) ||
             id.includes(query) ||
             (queryDigits.length > 0 && phone.includes(queryDigits))
           );
@@ -94,18 +118,23 @@ export class MockBackend implements PatientBackend {
       limit,
       offset,
       hasMore: offset + results.length < filtered.length,
+      ...(offset + results.length < filtered.length
+        ? { nextCursor: encodeCursor({ k: 'mock-search', offset: offset + results.length, q } satisfies MockCursor) }
+        : {}),
     };
   }
 
   async getPatient(ref: PatientRef, _ctx: RequestContext): Promise<ResolvedPatient> {
     // Mock patients have a single id that serves as both server id and identifier.
-    return this.findPatient('serverId' in ref ? ref.serverId : ref.identifier);
+    const patient = this.findPatient('serverId' in ref ? ref.serverId : ref.identifier);
+    return { ...patient, reference: `Patient/${patient.id.id}` };
   }
 
   async getPatientHistory(params: PatientHistoryParams, _ctx: RequestContext): Promise<PatientHistoryResponse> {
     const patient = this.findPatient(params.patientId);
     const limit = params.limit || 10;
-    const offset = params.offset || 0;
+    const q = JSON.stringify([params.patientId, params.startDate ?? '', params.endDate ?? '', params.visitType ?? '']);
+    const offset = pageStart(params.cursor, 'mock-history', q, params.offset);
 
     const visits = this.visits
       .filter((v) => v.patientId === params.patientId)
@@ -123,6 +152,9 @@ export class MockBackend implements PatientBackend {
       limit,
       offset,
       hasMore: offset + page.length < visits.length,
+      ...(offset + page.length < visits.length
+        ? { nextCursor: encodeCursor({ k: 'mock-history', offset: offset + page.length, q } satisfies MockCursor) }
+        : {}),
     };
   }
 

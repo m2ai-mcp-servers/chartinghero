@@ -124,6 +124,37 @@ function isOperationOutcome(value: unknown): value is { resourceType: 'Operation
 }
 
 /**
+ * A write was refused by a safety gate before anything was sent (FHIR_WRITE off, or the
+ * server cannot prove the duplicate check).
+ */
+export class WriteRefusedError extends ChartingHeroError {
+  constructor(message: string) {
+    super(message, 'WRITE_REFUSED', 403);
+    this.name = 'WriteRefusedError';
+  }
+}
+
+/** The operation exists in the interface but not in this build. */
+export class NotImplementedError extends ChartingHeroError {
+  constructor(message: string) {
+    super(message, 'NOT_IMPLEMENTED', 501);
+    this.name = 'NotImplementedError';
+  }
+}
+
+/**
+ * The FHIR server answered, but not in a way this client can use: wrong FHIR version, a
+ * paging link outside FHIR_BASE_URL, an unreadable /metadata. Messages are written here
+ * and carry no upstream text.
+ */
+export class UnsupportedServerError extends ChartingHeroError {
+  constructor(message: string) {
+    super(message, 'UNSUPPORTED_SERVER', 502);
+    this.name = 'UnsupportedServerError';
+  }
+}
+
+/**
  * Rate limit error - too many requests
  */
 export class RateLimitError extends ChartingHeroError {
