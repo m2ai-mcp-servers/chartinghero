@@ -1,0 +1,53 @@
+name: fhir-validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  base-and-conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # @medplum/core (dev only) needs Node ^22.18 or >=24.2.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: npm ci
+
+      # BASE
+      - run: npx tsc --noEmit
+      - run: npx tsc --noEmit -p tests/tsconfig.json
+      - run: npx eslint "src/**/*.ts"
+      - run: npm run build
+      - run: npx jest
+
+      - name: Golden fixtures are current
+        run: |
+          npm run golden
+          git add -N tests/fixtures
+          git diff --exit-code -- tests/fixtures
+
+      - name: Cache validator jar and FHIR packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/chartinghero
+            ~/.fhir/packages
+          key: fhir-validator-7.0.5-us-core-9.0.0
+
+      # Jar pinned by sha256 inside the script.
+      - run: bash scripts/validate-golden.sh
