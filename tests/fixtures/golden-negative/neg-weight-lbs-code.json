@@ -1,0 +1,609 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "resource": {
+        "resourceType": "Encounter",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://memyselfplusai.com/fhir/chartinghero/visit",
+            "value": "00000000-0000-4000-8000-000000000001"
+          }
+        ],
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "HH",
+          "display": "home health"
+        },
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "https://memyselfplusai.com/fhir/chartinghero/visit-type",
+                "code": "skilled_nursing",
+                "display": "Skilled Nursing"
+              },
+              {
+                "system": "http://snomed.info/sct",
+                "code": "439708006",
+                "display": "Home visit"
+              }
+            ],
+            "text": "Skilled Nursing"
+          }
+        ],
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "participant": [
+          {
+            "individual": {
+              "reference": "Practitioner/synthetic-nurse-0001",
+              "display": "Test Nurse, RN"
+            }
+          }
+        ],
+        "period": {
+          "start": "2026-03-09T09:00:00-04:00",
+          "end": "2026-03-09T09:45:00-04:00"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Encounter",
+        "ifNoneExist": "identifier=https://memyselfplusai.com/fhir/chartinghero/visit|00000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000002",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-blood-pressure"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "85354-9",
+              "display": "Blood pressure panel with all children optional"
+            }
+          ],
+          "text": "Blood pressure panel with all children optional"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 128,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 82,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000003",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-heart-rate"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ],
+          "text": "Heart rate"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueQuantity": {
+          "value": 74,
+          "unit": "/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000004",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-respiratory-rate"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "9279-1",
+              "display": "Respiratory rate"
+            }
+          ],
+          "text": "Respiratory rate"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueQuantity": {
+          "value": 16,
+          "unit": "/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000005",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-temperature"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8310-5",
+              "display": "Body temperature"
+            }
+          ],
+          "text": "Body temperature"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueQuantity": {
+          "value": 98.6,
+          "unit": "degF",
+          "system": "http://unitsofmeasure.org",
+          "code": "[degF]"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000006",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-pulse-oximetry"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "59408-5",
+              "display": "Oxygen saturation in Arterial blood by Pulse oximetry"
+            },
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation in Arterial blood"
+            }
+          ],
+          "text": "Oxygen saturation in Arterial blood by Pulse oximetry"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueQuantity": {
+          "value": 96,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000007",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-weight"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Body weight"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueQuantity": {
+          "value": 172,
+          "unit": "lb",
+          "system": "http://unitsofmeasure.org",
+          "code": "lbs"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000008",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "72514-3",
+              "display": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+            }
+          ],
+          "text": "Pain severity - 0-10 verbal numeric rating [Score] - Reported"
+        },
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "encounter": {
+          "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+        },
+        "effectiveDateTime": "2026-03-09T09:00:00-04:00",
+        "performer": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "valueInteger": 3
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000009",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-documentreference"
+          ],
+          "tag": [
+            {
+              "system": "https://memyselfplusai.com/fhir/chartinghero",
+              "code": "chartinghero-dev"
+            }
+          ]
+        },
+        "status": "current",
+        "docStatus": "preliminary",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "34746-8",
+              "display": "Nurse Note"
+            }
+          ],
+          "text": "Nurse Note"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category",
+                "code": "clinical-note",
+                "display": "Clinical Note"
+              }
+            ]
+          }
+        ],
+        "subject": {
+          "reference": "Patient/synthetic-patient-0001"
+        },
+        "date": "2026-03-09T09:45:00-04:00",
+        "author": [
+          {
+            "reference": "Practitioner/synthetic-nurse-0001",
+            "display": "Test Nurse, RN"
+          }
+        ],
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain; charset=utf-8",
+              "data": "U3ViamVjdGl2ZToKUmVwb3J0cyBtaWxkIGZhdGlndWUuCgpPYmplY3RpdmU6CkFsZXJ0IGFuZCBvcmllbnRlZC4KCkFzc2Vzc21lbnQ6ClN0YWJsZS4KClBsYW46CkNvbnRpbnVlIGN1cnJlbnQgcGxhbiBvZiBjYXJlLg==",
+              "title": "Visit note"
+            }
+          }
+        ],
+        "context": {
+          "encounter": [
+            {
+              "reference": "urn:uuid:00000000-0000-4000-8000-000000000001"
+            }
+          ],
+          "period": {
+            "start": "2026-03-09T09:00:00-04:00",
+            "end": "2026-03-09T09:45:00-04:00"
+          }
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "DocumentReference"
+      }
+    }
+  ]
+}
