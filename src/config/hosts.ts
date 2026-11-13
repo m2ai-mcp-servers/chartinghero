@@ -13,6 +13,9 @@ export const WRITE_HOSTS: readonly string[] = [
   'server.fire.ly',
 ];
 
+/** A bearer token may travel over plain http only to these. */
+export const LOOPBACK_HOSTS: readonly string[] = ['127.0.0.1', 'localhost', '::1'];
+
 /** URL.hostname wraps IPv6 in brackets; strip them before comparing. */
 export function normalizeHost(hostname: string): string {
   return hostname.replace(/^\[|\]$/g, '').toLowerCase();

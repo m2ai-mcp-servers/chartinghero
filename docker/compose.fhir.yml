@@ -1,0 +1,18 @@
+# Local FHIR R4 server for development, contract recording and CI parity.
+#
+#   docker compose -f docker/compose.fhir.yml up -d
+#   node scripts/seed-fhir.mjs
+#   docker compose -f docker/compose.fhir.yml restart   # H2 is in memory: restart wipes it
+#
+# Bound to loopback only. The image has no auth, so on the LAN any host could write to it
+# or wipe it mid-test.
+services:
+  hapi:
+    image: hapiproject/hapi:v8.12.0-2
+    ports:
+      - '127.0.0.1:8080:8080'
+    environment:
+      # Spring relaxed binding: the same names work as a GitHub Actions service env.
+      SPRING_DATASOURCE_URL: 'jdbc:h2:mem:test_mem'
+      HAPI_FHIR_FHIR_VERSION: 'R4'
+      JAVA_TOOL_OPTIONS: '-Xmx1g'

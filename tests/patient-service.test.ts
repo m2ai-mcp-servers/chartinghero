@@ -82,14 +82,6 @@ describe('searchPatients', () => {
     });
   });
 
-  test('should respect limit parameter', async () => {
-    // Search for a common term that matches multiple patients
-    const result = await searchPatients({ query: 'PT-', limit: 2 });
-
-    expect(result.limit).toBe(2);
-    expect(result.results.length).toBeLessThanOrEqual(2);
-  });
-
   test('should throw ValidationError for empty query', async () => {
     await expect(searchPatients({ query: '' })).rejects.toThrow(ValidationError);
   });

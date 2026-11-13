@@ -25,7 +25,7 @@ export async function executeSearchPatient(args: SearchPatientInput): Promise<To
       searchType: args.searchType,
       status: args.status,
       limit: args.limit ?? 10,
-      offset: 0,
+      cursor: args.cursor,
     });
 
     let resultText = '';
@@ -34,13 +34,21 @@ export async function executeSearchPatient(args: SearchPatientInput): Promise<To
       resultText += `${MOCK_BANNER}\n\n`;
     }
 
-    if (response.results.length === 0) {
+    const total = `${response.total}${response.totalIsLowerBound ? '+' : ''}`;
+    if (response.results.length === 0 && response.nextCursor) {
+      // A page can come back empty after filtering while later pages still hold matches.
+      resultText += `No matches on this page for "${args.query}", but more pages exist.`;
+      resultText += `\n_Next page: repeat this search with cursor "${response.nextCursor}"_`;
+    } else if (response.results.length === 0) {
       resultText += `No patients found matching "${args.query}"`;
     } else {
-      resultText += `Found ${response.total} patient(s) matching "${args.query}":\n\n`;
+      resultText += `Found ${total} patient(s) matching "${args.query}":\n\n`;
 
       for (const patient of response.results) {
         resultText += `**${patient.firstName} ${patient.lastName}** (${patient.id})\n`;
+        if (patient.identifier) {
+          resultText += `  • Identifier: ${patient.identifier}\n`;
+        }
         resultText += `  • DOB: ${patient.dateOfBirth}\n`;
         if (patient.phone) {
           resultText += `  • Phone: ${patient.phone}\n`;
@@ -53,7 +61,10 @@ export async function executeSearchPatient(args: SearchPatientInput): Promise<To
       }
 
       if (response.hasMore) {
-        resultText += `\n_Showing ${response.results.length} of ${response.total} results_`;
+        resultText += `\n_Showing ${response.results.length} of ${total} results_`;
+        resultText += response.nextCursor
+          ? `\n_Next page: repeat this search with cursor "${response.nextCursor}"_`
+          : '\n_Narrow the search to see the rest._';
       }
     }
 
@@ -78,6 +89,7 @@ Returns matching patient records with basic information. Use this tool to find p
 
 Examples:
 - Search by name: "Eleanor Thompson"
+- Search by name and date of birth (safest by voice): "Thompson 1942-03-15"
 - Search by ID: "PT-10001"
 - Search by phone: "555-0101"`,
   inputSchema: searchPatientSchema,

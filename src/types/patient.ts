@@ -90,6 +90,8 @@ export interface PatientSearchResult {
   phone?: string;
   status: Patient['status'];
   primaryDiagnosis?: string;
+  /** Business identifier (PT-xxxxx or MRN) when it differs from `id`. */
+  identifier?: string;
 }
 
 /**
@@ -101,6 +103,8 @@ export interface PatientSearchParams {
   status?: Patient['status'];
   limit?: number;
   offset?: number;
+  /** Opaque cursor from a previous response's nextCursor. */
+  cursor?: string;
 }
 
 /**
@@ -109,7 +113,11 @@ export interface PatientSearchParams {
 export interface PatientSearchResponse {
   results: PatientSearchResult[];
   total: number;
+  /** True when more pages exist and `total` only counts what has been seen so far. */
+  totalIsLowerBound?: boolean;
   limit: number;
   offset: number;
   hasMore: boolean;
+  /** Pass back as `cursor` for the next page. Absent on the last page. */
+  nextCursor?: string;
 }

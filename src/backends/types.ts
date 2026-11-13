@@ -1,6 +1,6 @@
 /**
  * Backend seam. patient-service validates input and delegates here; each backend
- * (mock today, FHIR from PR6) implements the same four operations.
+ * (mock or FHIR) implements the same four operations.
  */
 
 import type {
@@ -16,7 +16,10 @@ import type {
 export type PatientRef = { serverId: string } | { identifier: string };
 
 /** A patient as returned by a backend. The FHIR backend fills it from Patient resources. */
-export type ResolvedPatient = Patient;
+export interface ResolvedPatient extends Patient {
+  /** What a later `subject` points at (plan 3.1). */
+  reference: `Patient/${string}`;
+}
 
 /** Visit note input that has passed patient-service validation. */
 export type ValidatedVisitNote = CreateVisitNoteParams;
@@ -38,6 +41,8 @@ export interface WriteContext extends RequestContext {
 
 export interface PatientBackend {
   readonly kind: 'mock' | 'fhir';
+  /** Startup probe. A rejection aborts startup. */
+  init?(): Promise<void>;
   searchPatients(p: PatientSearchParams, ctx: RequestContext): Promise<PatientSearchResponse>;
   getPatient(ref: PatientRef, ctx: RequestContext): Promise<ResolvedPatient>;
   getPatientHistory(p: PatientHistoryParams, ctx: RequestContext): Promise<PatientHistoryResponse>;

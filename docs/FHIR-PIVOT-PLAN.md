@@ -365,6 +365,9 @@ Units use system `http://unitsofmeasure.org`. Observation category is `http://te
 **PR7. Transaction write: idempotent, atomic, write-gated**
 - Files: `src/backends/fhir/write.ts`, `src/backends/fhir/practitioner.ts`, `src/backends/fhir/fhir-backend.ts`, `tests/integration/write.int.test.ts`, `scripts/smoke-mcp.mjs` (SDK `Client` plus `StdioClientTransport` against `dist/index.js`).
 - Changes: implement section 3.3 end to end.
+- Carried over from the PR6 review:
+  - The derived idempotency key in `patient-service.ts` hashes the patient id as the caller typed it, so `PT-10001` and the server id give two keys for one visit. Hash the resolved server id (`ResolvedPatient.reference`) instead.
+  - PR6 refuses every note-only write because the pre-flight is an Encounter search. Give the note its own duplicate check (DocumentReference `identifier`, proved the same way) before allowing `FHIR_WRITE_PROFILE=note-only`.
 - Acceptance (local HAPI):
   - **Idempotency, all types.**
     1. Commit a full note with `clientVisitId=K`.

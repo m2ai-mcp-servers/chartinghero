@@ -5,7 +5,7 @@
  * Rules: docs/FHIR-PIVOT-PLAN.md section 3.2.
  */
 
-import { isWriteHost, normalizeHost } from './config/hosts.js';
+import { isWriteHost, LOOPBACK_HOSTS, normalizeHost } from './config/hosts.js';
 import { readLegacyEnv } from './legacy-env.js';
 
 type Env = Record<string, string | undefined>;
@@ -157,6 +157,8 @@ function parseFhir(env: Env, problems: string[]): FhirConfig | undefined {
 
   const baseUrl = env.FHIR_BASE_URL;
   let host = '';
+  // Read from the parsed URL: the raw string may say HTTP:// or start with a space.
+  let plainHttp = false;
   if (!baseUrl) {
     problems.push('FHIR_BASE_URL is required when BACKEND=fhir');
   } else {
@@ -165,6 +167,7 @@ function parseFhir(env: Env, problems: string[]): FhirConfig | undefined {
       if (url.protocol !== 'http:' && url.protocol !== 'https:') {
         problems.push(`FHIR_BASE_URL must be http or https (got ${url.protocol})`);
       }
+      plainHttp = url.protocol === 'http:';
       host = normalizeHost(url.hostname);
     } catch {
       problems.push('FHIR_BASE_URL is not a valid URL');
@@ -203,6 +206,10 @@ function parseFhir(env: Env, problems: string[]): FhirConfig | undefined {
     problems.push('FHIR_PRACTITIONER_ID is not a valid FHIR resource id');
   } else if (host && !isWriteHost(host)) {
     problems.push(`FHIR_PRACTITIONER_ID refused: host ${host} is not in WRITE_HOSTS`);
+  }
+
+  if (env.FHIR_BEARER_TOKEN && plainHttp && host && !LOOPBACK_HOSTS.includes(host)) {
+    problems.push('FHIR_BEARER_TOKEN refused: FHIR_BASE_URL is plain http on a host that is not loopback; use https');
   }
 
   const identifierSystem = env.FHIR_IDENTIFIER_SYSTEM || DEFAULT_IDENTIFIER_SYSTEM;

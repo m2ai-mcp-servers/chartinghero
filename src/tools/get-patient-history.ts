@@ -43,7 +43,7 @@ export async function executeGetPatientHistory(args: PatientHistoryInput): Promi
     const response = await getPatientHistory({
       patientId: args.patientId,
       limit: args.limit ?? 10,
-      offset: 0,
+      cursor: args.cursor,
       startDate: args.startDate,
       endDate: args.endDate,
       visitType: args.visitType,
@@ -57,7 +57,12 @@ export async function executeGetPatientHistory(args: PatientHistoryInput): Promi
 
     resultText += `**Visit History for ${response.patientName}** (${response.patientId})\n\n`;
 
-    if (response.visits.length === 0) {
+    if (response.visits.length === 0 && response.nextCursor) {
+      resultText += '_No visits on this page, but more pages exist._\n';
+      resultText += `_More visits: repeat this request with cursor "${response.nextCursor}"_\n`;
+    } else if (response.visits.length === 0 && args.cursor) {
+      resultText += '_No further visits; this is the end of the history._\n';
+    } else if (response.visits.length === 0) {
       resultText += '_No visits found for the specified criteria._\n';
 
       if (args.startDate || args.endDate || args.visitType) {
@@ -67,11 +72,11 @@ export async function executeGetPatientHistory(args: PatientHistoryInput): Promi
         if (args.visitType) resultText += `  • Type: ${formatVisitType(args.visitType)}\n`;
       }
     } else {
-      resultText += `Showing ${response.visits.length} of ${response.total} visit(s):\n\n`;
+      resultText += `Showing ${response.visits.length} of ${response.total}${response.totalIsLowerBound ? '+' : ''} visit(s):\n\n`;
 
       for (const visit of response.visits) {
         const statusIcon = visit.status === 'completed' ? '✅' : '⏳';
-        resultText += `${statusIcon} **${visit.visitDate}** - ${formatVisitType(visit.visitType)}\n`;
+        resultText += `${statusIcon} **${visit.visitDate || 'date not recorded'}** - ${formatVisitType(visit.visitType)}\n`;
         resultText += `   • Duration: ${visit.duration} min | Nurse: ${visit.nurseName}\n`;
         if (visit.hasVitals) {
           resultText += `   • Vitals recorded\n`;
@@ -80,7 +85,9 @@ export async function executeGetPatientHistory(args: PatientHistoryInput): Promi
       }
 
       if (response.hasMore) {
-        resultText += `_Showing ${response.visits.length} of ${response.total} visits. Use limit parameter to see more._\n`;
+        resultText += response.nextCursor
+          ? `_More visits: repeat this request with cursor "${response.nextCursor}"_\n`
+          : '_More visits exist. Use the limit parameter to see more._\n';
       }
     }
 
